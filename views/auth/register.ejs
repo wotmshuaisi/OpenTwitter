@@ -1,0 +1,22 @@
+<% include '../partials/nav.ejs' %>
+
+<div class="empty-state" style="display:flex;justify-content:center;align-items:center;height:70vh;">
+  <div class="card" style="padding:40px;max-width:400px;margin:0;">
+    <h1 style="text-align:center;margin-bottom:24px;">Register</h1>
+    
+    <div id="register-error" style="color:red;margin-bottom:16px;"></div>
+    
+    <div class="composer-actions">
+      <button hx-get="/auth/register" hx-trigger="click" hx-swap="outerHTML" class="btn btn-primary" style="width:100%;">Register</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Check if already logged in
+document.addEventListener('DOMContentLoaded', function() {
+  if (sessionStorage.getItem('sessionToken')) {
+    window.location.href = '/';
+  }
+});
+</script>

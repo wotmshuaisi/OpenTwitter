@@ -1,0 +1,36 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Followers</h1>
+
+<div class="card" style="margin-top: 16px;">
+  <div id="followers-list" class="post"></div>
+</div>
+
+<script>
+// Fetch followers
+fetch('/api/profiles/<%= user.username %>/followers').then(response => response.json()).then(data => {
+  const list = document.getElementById('followers-list');
+  if (data.followers && data.followers.length > 0) {
+    const html = data.followers.map(follower => {
+      return '<article class="post">' +
+        '<div class="post-header">' +
+        '<a href="/u/' + follower.username + '">' +
+        '<div class="post-author" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>' +
+        '</a>' +
+        '<div><a href="/u/' + follower.username + '" class="post-author-name">' + escapeHtml(follower.displayName) + '</a><span class="post-author-handle">@' + follower.username + '</span><span class="post-meta">· ' + new Date().toLocaleDateString() + '</span></div>' +
+        '</div>' +
+        '<div class="post-body"></div>' +
+        '<div class="post-actions">' +
+        '<button class="btn btn-secondary btn-sm" aria-label="Unfollow" hx-post="/api/follows/u/' + follower.username + '/unfollow">Unfollow</button>' +
+        '</div>' +
+        '</article>';
+    }).join('');
+    list.innerHTML = html;
+  } else {
+    list.innerHTML = '<div class="empty-state"><p>No followers yet.</p></div>';
+  }
+}).catch(error => {
+  console.error('Error loading followers:', error);
+  document.getElementById('followers-list').innerHTML = '<div class="empty-state"><p>Error loading followers.</p></div>';
+});
+</script>

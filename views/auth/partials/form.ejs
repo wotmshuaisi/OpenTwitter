@@ -1,0 +1,102 @@
+<div class="card" style="margin-top: 40px;max-width:400px;margin-left:auto;margin-right:auto;">
+  <h1 style="text-align:center;margin-bottom:24px;">
+    <%= pageTitle %>
+  </h1>
+  
+  <form hx-post="/api/auth/<%= pageAction %>" hx-swap="outerHTML" onsubmit="return false;">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="your@email.com" required>
+      <div class="error-message" id="email-error"></div>
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="••••••••" required>
+      <div class="error-message" id="password-error"></div>
+    </div>
+    
+    <% if (pageAction === 'login') { %>
+    <div class="form-group">
+      <label for="confirm-password">Confirm Password</label>
+      <input type="password" id="confirm-password" name="confirm-password" placeholder="••••••••" required>
+      <div class="error-message" id="confirm-password-error"></div>
+    </div>
+    <% } %>
+    
+    <div class="composer-actions">
+      <div id="form-status"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">
+        <%= pageButton %>
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirm-password').value;
+  
+  // Clear errors
+  document.getElementById('email-error').textContent = '';
+  document.getElementById('password-error').textContent = '';
+  document.getElementById('confirm-password-error').textContent = '';
+  document.getElementById('form-status').textContent = 'Processing...';
+  
+  // Validation
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById('email-error').textContent = 'Please enter a valid email address';
+    return;
+  }
+  
+  if (!password || password.length < 6) {
+    document.getElementById('password-error').textContent = 'Password must be at least 6 characters';
+    return;
+  }
+  
+  if (confirmPassword && password !== confirmPassword) {
+    document.getElementById('confirm-password-error').textContent = 'Passwords do not match';
+    return;
+  }
+  
+  // Get submit button
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Processing...';
+  
+  // Use fetch instead of htmx for this demo
+  fetch('/api/auth/<%= pageAction %>', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    body: new FormData()
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        if (data.sessionToken) {
+          // Store session token (in real app, this would be handled by express-session)
+          localStorage.setItem('sessionToken', data.sessionToken);
+          // Redirect to home
+          window.location.href = '/';
+        } else {
+          // Register success - show login page
+          window.location.href = '/login';
+        }
+      } else {
+        document.getElementById('form-status').textContent = data.error || 'An error occurred';
+      }
+    })
+    .catch(error => {
+      console.error('%s error:', '<%= pageAction %>');
+      document.getElementById('form-status').textContent = 'An error occurred. Please try again.';
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    });
+});
+</script>

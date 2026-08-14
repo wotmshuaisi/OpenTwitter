@@ -1,0 +1,85 @@
+<article class="post" data-post-id="<%= post.id %>">
+  <div class="post-header">
+    <a href="/u/<%= post.user.username %>">
+      <% if (post.user.avatar_media_id) { %>
+        <img class="post-author" src="/media/<%= post.user.avatar_media_id %>storage_key" alt="<%= post.user.display_name %>">
+      <% } else { %>
+        <div class="post-author" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>
+      <% } %>
+    </a>
+    <div>
+      <a href="/u/<%= post.user.username %>" class="post-author-name"><%= post.user.display_name %></a>
+      <span class="post-author-handle">@<%= post.user.username %></span>
+      <span class="post-meta">· <%= new Date(post.created_at).toLocaleDateString() %></span>
+    </div>
+  </div>
+  
+  <% if (post.type === 'repost') { %>
+    <div class="post-meta" style="color:var(--text-secondary);margin-bottom:8px;">
+      Reposted by <a href="/u/<%= post.user.username %>"><%= post.user.display_name %></a>
+    </div>
+  <% } %>
+  
+  <div class="post-body">
+    <%= escapeHtml(post.body || '') %>
+  </div>
+  
+  <% if (post.repost_of_id) { %>
+    <article class="original-post" data-post-id="<%= post.repost_of_id %>">
+      <div class="post-header">
+        <a href="/u/<%= post.user.username %>">
+          <% if (post.user.avatar_media_id) { %>
+            <img class="post-author" src="/media/<%= post.user.avatar_media_id %>storage_key" alt="<%= post.user.display_name %>">
+          <% } else { %>
+            <div class="post-author" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>
+          <% } %>
+        </a>
+        <div>
+          <a href="/u/<%= post.user.username %>" class="post-author-name"><%= post.user.display_name %></a>
+          <span class="post-author-handle">@<%= post.user.username %></span>
+          <span class="post-meta">· <%= new Date(post.created_at).toLocaleDateString() %></span>
+        </div>
+      </div>
+      
+      <div class="post-body">
+        <%= escapeHtml(post.body || '') %>
+      </div>
+    </article>
+  <% } %>
+  
+  <div class="post-actions" style="display:flex;gap:12px;padding-top:12px;border-top:1px solid var(--border-color);">
+    <button class="btn btn-secondary btn-sm" aria-label="Repost" hx-post="/api/posts/<%= post.id %>/repost" hx-target="#post-actions">Repost</button>
+    <button class="btn btn-secondary btn-sm" aria-label="Share" onclick="copyLink('/posts/<%= post.id %>')">Share</button>
+  </div>
+  
+  <% if (post.type !== 'repost') { %>
+    <div id="post-actions" style="display:flex;gap:12px;padding-top:12px;border-top:1px solid var(--border-color);">
+      <button class="btn btn-secondary btn-sm" aria-label="Repost">Repost</button>
+      <button class="btn btn-secondary btn-sm" aria-label="Share">Share</button>
+    </div>
+  <% } %>
+</article>
+
+<script>
+function copyLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showNotification('Link copied to clipboard!');
+  }).catch(() => {
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showNotification('Link copied to clipboard!');
+  });
+}
+
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'notification';
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 3000);
+}
+</script>

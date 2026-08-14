@@ -1,0 +1,160 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Messages with <%= otherUser.displayName %></h1>
+
+<div class="card" style="margin-top: 16px;">
+  <div class="message-bubble message-sent">
+    <div class="post-body">
+      <%= escapeHtml(message.body) %>
+    </div>
+  </div>
+  
+  <% if (message.media_id) { %>
+    <div style="margin:8px 0;">
+      <a href="/media/<%= message.media_id %>storage_key">
+        <% if (message.media.type === 'image') { %>
+          <img style="max-width:300px;" src="/media/<%= message.media_id %>storage_key" alt="Media attachment">
+        <% } else if (message.media.type === 'video') { %>
+          <video style="max-width:300px;" controls>
+            <source src="/media/<%= message.media_id %>storage_key" type="video/mp4">
+          </video>
+        <% } else { %>
+          <div style="background:var(--bg-secondary);padding:8px;border-radius:4px;">Media attachment</div>
+        <% } %>
+      </a>
+    </div>
+  <% } %>
+</div>
+
+<div class="card" style="margin-top: 16px;">
+  <div class="composer">
+    <form hx-post="/api/messages" hx-target="#messages-feed" hx-swap="innerHTML" enctype="multipart/form-data" onsubmit="return false;">
+      <div class="form-group">
+        <textarea id="message-body" name="body" placeholder="Type a message..." required></textarea>
+        <div class="error-message" id="message-body-error"></div>
+      </div>
+      
+      <div class="form-group" style="margin-bottom: 0;">
+        <input type="file" id="message-file" name="file" accept="image/*,video/*" style="display:none">
+        <label for="message-file" class="btn btn-secondary">
+          <% if (messagePreview) { %>
+            <img src="<%= messagePreview %>" style="max-height:100px">
+          <% } else { %>
+            Add Media
+          <% } %>
+        </label>
+        <div class="error-message" id="file-error"></div>
+      </div>
+      
+      <div class="composer-actions">
+        <div id="composer-status"></div>
+        <button type="submit" class="btn btn-primary">Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="messages-feed" class="card" style="padding:0;">
+  <div class="empty-state">
+    <p>Loading messages...</p>
+  </div>
+</div>
+
+<script>
+let messagePreview = null;
+
+document.getElementById('message-file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'];
+  if (!validTypes.includes(file.type)) {
+    document.getElementById('file-error').textContent = 'Invalid file type. Please use JPG, PNG, GIF, MP4, or WEBM';
+    return;
+  }
+  
+  // Validate file size (max 10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    document.getElementById('file-error').textContent = 'File too large. Maximum size is 10MB';
+    return;
+  }
+  
+  // Show preview
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      messagePreview = e.target.result;
+      document.querySelector('#message-file + label').innerHTML = `<img src="${e.target.result}" style="max-height:100px">`;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    messagePreview = file;
+    document.querySelector('#message-file + label').textContent = 'Video preview';
+  }
+  
+  // Clear error
+  document.getElementById('file-error').textContent = '';
+});
+
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const body = document.getElementById('message-body').value.trim();
+  const fileInput = document.getElementById('message-file');
+  
+  // Validation
+  if (body.length > 140) {
+    document.getElementById('message-body-error').textContent = 'Message must be 140 characters or less';
+    return;
+  }
+  
+  if (!body && !fileInput.files[0]) {
+    document.getElementById('message-body-error').textContent = 'Please write something or attach a file';
+    return;
+  }
+  
+  // Clear errors
+  document.getElementById('message-body-error').textContent = '';
+  document.getElementById('file-error').textContent = '';
+  document.getElementById('composer-status').textContent = 'Sending...';
+  
+  const formData = new FormData();
+  formData.append('body', body);
+  
+  if (fileInput.files[0]) {
+    formData.append('file', fileInput.files[0]);
+  }
+  
+  // Use fetch instead of htmx for this demo
+  const form = e.target;
+  form.reset();
+  messagePreview = null;
+  
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+  
+  fetch('/api/messages', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    body: formData
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      } else {
+        document.getElementById('composer-status').textContent = data.error;
+      }
+    })
+    .catch(error => {
+      console.error('Send message error:', error);
+      document.getElementById('composer-status').textContent = 'An error occurred. Please try again.';
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    });
+});
+</script>

@@ -1,0 +1,21 @@
+<div class="message-bubble message-sent">
+  <div class="post-body">
+    <%= escapeHtml(message.body) %>
+  </div>
+  
+  <% if (message.media_id) { %>
+    <div style="margin:8px 0;">
+      <a href="/media/<%= message.media_id %>storage_key">
+        <% if (message.media.type === 'image') { %>
+          <img style="max-width:300px;" src="/media/<%= message.media_id %>storage_key" alt="Media attachment">
+        <% } else if (message.media.type === 'video') { %>
+          <video style="max-width:300px;" controls>
+            <source src="/media/<%= message.media_id %>storage_key" type="video/mp4">
+          </video>
+        <% } else { %>
+          <div style="background:var(--bg-secondary);padding:8px;border-radius:4px;">Media attachment</div>
+        <% } %>
+      </a>
+    </div>
+  <% } %>
+</div>

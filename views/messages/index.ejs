@@ -1,0 +1,43 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Messages</h1>
+
+<div class="card" style="margin-top: 16px;">
+  <% if (conversations && conversations.length > 0) { %>
+    <% conversations.forEach(conv => { %>
+      <div class="conversation-item" style="display:flex;gap:12px;padding:12px;border-bottom:1px solid var(--border-color);cursor:pointer" data-conversation-id="<%= conv.id %>">
+        <div style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;">
+            <a href="/u/<%= conv.participant.username %>" class="conversation-name"><%= conv.participant.displayName %></a>
+            <% if (conv.unread > 0) { %>
+              <span class="unread-badge" style="background:var(--accent-color);color:white;border-radius:999px;padding:2px 8px;font-size:12px;"><%= conv.unread %></span>
+            <% } %>
+          </div>
+          <div style="color:var(--text-secondary);font-size:12px;"><%= conv.lastMessage %></div>
+        </div>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div class="empty-state">
+      <p>No conversations yet. Start a conversation with someone!</p>
+    </div>
+  <% } %>
+</div>
+
+<script>
+// Fetch conversations
+fetch('/api/messages/conversations').then(response => response.json()).then(data => {
+  const conversations = data.conversations;
+  
+  if (conversations.length > 0) {
+    conversations.forEach(conv => {
+      document.querySelector(`[data-conversation-id="${conv.id}"]`).onclick = function() {
+        window.location.href = '/messages/' + conv.id;
+      };
+    });
+  }
+}).catch(error => {
+  console.error('Error loading conversations:', error);
+});
+</script>

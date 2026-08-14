@@ -1,0 +1,17 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Your Posts</h1>
+
+<div class="card" style="margin-top: 16px;">
+  <% if (posts && posts.length > 0) { %>
+    <% posts.forEach(post => { %>
+      <div class="post">
+        <%= require('path').join(__dirname, 'partials', 'post-card.ejs').replace('<%= post.id %>', post.id) %>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div class="empty-state">
+      <p>No posts yet. Create your first post!</p>
+    </div>
+  <% } %>
+</div>

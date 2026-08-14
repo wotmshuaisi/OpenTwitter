@@ -1,0 +1,32 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Users</h1>
+
+<div class="card" style="margin-top: 16px;">
+  <% if (users && users.length > 0) { %>
+    <div class="user-list">
+      <% users.forEach(user => { %>
+        <div class="user-item" style="display:flex;gap:16px;padding:12px;border-bottom:1px solid var(--border-color);">
+          <% if (user.avatar_media_id) { %>
+            <img class="user-avatar" src="/media/<%= user.avatar_media_id %>storage_key" alt="<%= user.display_name %>">
+          <% } else { %>
+            <div class="user-avatar" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>
+          <% } %>
+          <div style="flex:1;">
+            <a href="/u/<%= user.username %>" style="font-size:16px;font-weight:600;"><%= user.display_name %></a>
+            <span style="color:var(--text-secondary);margin-left:8px;">@<%= user.username %></span>
+          </div>
+          <div style="text-align:right;">
+            <span style="color:var(--text-secondary);font-size:12px;">
+              <%= user.followerCount %>&nbsp;followers
+            </span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="empty-state">
+      <p>No users found.</p>
+    </div>
+  <% } %>
+</div>

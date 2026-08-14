@@ -1,0 +1,85 @@
+<% include '../partials/nav.ejs' %>
+
+<div class="card" style="padding:0;">
+  <div class="profile-header">
+    <% if (profile.user.avatar_media_id) { %>
+      <img class="avatar" src="/media/<%= profile.user.avatar_media_id %>storage_key" alt="<%= profile.user.display_name %>">
+    <% } else { %>
+      <div class="avatar" style="width:120px;height:120px;background:var(--bg-secondary);border-radius:50%;"></div>
+    <% } %>
+    
+    <h1 class="name"><%= escapeHtml(profile.user.display_name) %></h1>
+    <p class="handle">@<%= profile.user.username %></p>
+    
+    <% if (profile.user.bio) { %>
+    <p style="color:var(--text-secondary);margin-bottom:12px;"><%= escapeHtml(profile.user.bio) %></p>
+    <% } %>
+    
+    <p style="color:var(--text-secondary);"><%= profile.user.location %></p>
+    <% if (profile.user.website) { %>
+    <p style="color:var(--text-secondary);">
+      <a href="<%= escapeHtml(profile.user.website) %>"><%= escapeHtml(profile.user.website) %></a>
+    </p>
+    <% } %>
+    
+    <% if (profile.user.header_media_id) { %>
+    <img style="width:100%;height:200px;border-radius:8px;margin-top:24px;" src="/media/<%= profile.user.header_media_id %>storage_key" alt="Header image">
+    <% } %>
+    
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-value"><%= profile.followerCount %></div>
+        <div class="stat-label">Followers</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value"><%= profile.followingCount %></div>
+        <div class="stat-label">Following</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <h2 style="padding:16px;border-bottom:1px solid var(--border-color);margin-bottom:0;">Posts</h2>
+  <div id="posts-feed" class="post"></div>
+</div>
+
+<script>
+// Fetch user data and posts
+fetch('/api/profiles/<%= profile.user.username %>/with-stats').then(response => response.json()).then(data => {
+  // Update stats
+  document.querySelector('.stat-value:first-child').textContent = data.user.followerCount;
+  document.querySelector('.stat-value:last-child').textContent = data.user.followingCount;
+  
+  // Fetch and render posts
+  fetch('/api/posts/user/' + data.user.id).then(response => response.json()).then(posts => {
+    const feed = document.getElementById('posts-feed');
+    if (posts && posts.length > 0) {
+      const html = posts.map(post => {
+        return '<article class="post">' +
+          '<div class="post-header">' +
+          '<a href="/u/' + data.user.username + '">' +
+          '<div class="post-author" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>' +
+          '</a>' +
+          '<div><a href="/u/' + data.user.username + '" class="post-author-name">' + escapeHtml(data.user.display_name) + '</a><span class="post-author-handle">@' + data.user.username + '</span><span class="post-meta">· ' + new Date(post.created_at).toLocaleDateString() + '</span></div>' +
+          '</div>' +
+          '<div class="post-body">' + escapeHtml(post.body || '') + '</div>' +
+          '<div class="post-actions">' +
+          '<button class="btn btn-secondary btn-sm" aria-label="Repost">Repost</button>' +
+          '<button class="btn btn-secondary btn-sm" aria-label="Share">Share</button>' +
+          '</div>' +
+          '</article>';
+      }).join('');
+      feed.innerHTML = html;
+    } else {
+      feed.innerHTML = '<div class="empty-state"><p>No posts yet.</p></div>';
+    }
+  }).catch(error => {
+    console.error('Error loading posts:', error);
+    document.getElementById('posts-feed').innerHTML = '<div class="empty-state"><p>Error loading posts.</p></div>';
+  });
+}).catch(error => {
+  console.error('Error loading profile:', error);
+  document.querySelector('.profile-header').innerHTML = '<div class="empty-state"><p>Error loading profile.</p></div>';
+});
+</script>

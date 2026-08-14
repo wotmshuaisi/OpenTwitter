@@ -1,0 +1,63 @@
+<div class="card" style="margin-top: 40px;max-width:400px;margin-left:auto;margin-right:auto;">
+  <h1 style="text-align:center;margin-bottom:24px;">
+    <%= pageTitle %>
+  </h1>
+  
+  <% if (code) { %>
+  <form hx-post="/api/auth/verify-email" hx-swap="outerHTML" onsubmit="return false;">
+    <div class="form-group">
+      <label for="code">Verification Code</label>
+      <input type="text" id="code" name="code" placeholder="123456" required>
+      <div class="error-message" id="code-error"></div>
+    </div>
+    
+    <div class="composer-actions">
+      <div id="form-status"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">
+        Verify
+      </button>
+    </div>
+  </form>
+  <% } else { %>
+  <div class="empty-state">
+    <p>An error occurred. Please refresh and try again.</p>
+  </div>
+  <% } %>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const code = document.getElementById('code').value.trim();
+  document.getElementById('code-error').textContent = '';
+  document.getElementById('form-status').textContent = 'Verifying...';
+  
+  // Get submit button
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Verifying...';
+  
+  fetch('/api/auth/verify-email', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    body: new FormData()
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = '/login';
+      } else {
+        document.getElementById('form-status').textContent = data.error || 'An error occurred';
+      }
+    })
+    .catch(error => {
+      console.error('Verification error:');
+      document.getElementById('form-status').textContent = 'An error occurred. Please try again.';
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    });
+});
+</script>

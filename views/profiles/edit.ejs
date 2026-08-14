@@ -1,0 +1,78 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Edit Profile</h1>
+
+<div class="card" style="margin-top: 24px;">
+  <form hx-post="/api/profiles/<%= user.username %>/profile" hx-swap="outerHTML" onsubmit="return false;">
+    <div class="form-group">
+      <label for="display_name">Display Name</label>
+      <input type="text" id="display_name" name="display_name" value="<%= user.display_name %>" required>
+      <div class="error-message" id="display_name-error"></div>
+    </div>
+    
+    <div class="form-group">
+      <label for="bio">Bio</label>
+      <textarea id="bio" name="bio" rows="4"><%= user.bio || '' %></textarea>
+      <div class="error-message" id="bio-error"></div>
+    </div>
+    
+    <div class="form-group">
+      <label for="location">Location</label>
+      <input type="text" id="location" name="location" value="<%= user.location || '' %>">
+      <div class="error-message" id="location-error"></div>
+    </div>
+    
+    <div class="form-group">
+      <label for="website">Website</label>
+      <input type="url" id="website" name="website" value="<%= user.website || '' %>">
+      <div class="error-message" id="website-error"></div>
+    </div>
+    
+    <div class="composer-actions" style="margin-top: 24px;">
+      <div id="form-status"></div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const display_name = document.getElementById('display_name').value.trim();
+  const bio = document.getElementById('bio').value.trim();
+  const location = document.getElementById('location').value.trim();
+  const website = document.getElementById('website').value.trim();
+  
+  // Clear errors
+  document.getElementById('display_name-error').textContent = '';
+  document.getElementById('bio-error').textContent = '';
+  document.getElementById('location-error').textContent = '';
+  document.getElementById('website-error').textContent = '';
+  document.getElementById('form-status').textContent = 'Saving...';
+  
+  // Submit form
+  const formData = new FormData();
+  formData.append('display_name', display_name);
+  formData.append('bio', bio);
+  formData.append('location', location);
+  formData.append('website', website);
+  
+  fetch('/api/profiles/<%= user.username %>/profile', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    body: formData
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = '/u/<%= user.username %>';
+      } else {
+        document.getElementById('form-status').textContent = data.error;
+      }
+    })
+    .catch(error => {
+      document.getElementById('form-status').textContent = 'An error occurred. Please try again.';
+      console.error('Profile edit error:', error);
+    });
+});
+</script>
