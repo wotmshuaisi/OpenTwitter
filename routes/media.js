@@ -3,7 +3,7 @@ const router = express.Router();
 const { storage } = require('../storage');
 
 // Serve media files
-router.get('/media/*', (req, res) => {
+router.get('/media/:key', (req, res) => {
   try {
     const storageKey = req.params[0];
     

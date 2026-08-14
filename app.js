@@ -33,22 +33,24 @@ app.use(session({
   }
 }));
 
-// Mount route directories
-const routePaths = {
-  'auth': path.join(__dirname, 'routes', 'auth'),
-  'profiles': path.join(__dirname, 'routes', 'profiles'),
-  'follows': path.join(__dirname, 'routes', 'follows'),
-  'posts': path.join(__dirname, 'routes', 'posts'),
-  'feed': path.join(__dirname, 'routes', 'feed'),
-  'messages': path.join(__dirname, 'routes', 'messages'),
-  'analytics': path.join(__dirname, 'routes', 'analytics'),
-  'media': path.join(__dirname, 'routes', 'media'),
-  'health': path.join(__dirname, 'routes', 'health')
-};
+// Mount route routers
+const auth = require('./routes/auth');
+const profiles = require('./routes/profiles');
+const follows = require('./routes/follows');
+const posts = require('./routes/posts');
+const feed = require('./routes/feed');
+const messages = require('./routes/messages');
+const media = require('./routes/media');
+const health = require('./routes/health');
 
-Object.entries(routePaths).forEach(([name, dir]) => {
-  app.use(`/api/${name}`, express.static(dir));
-});
+app.use(auth);
+app.use('/profiles', profiles);
+app.use('/follows', follows);
+app.use('/posts', posts);
+app.use('/messages', messages);
+app.use('/media', media);
+app.use('/health', health);
+app.use('/api', feed);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

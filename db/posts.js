@@ -39,22 +39,20 @@ function getPostsByUser(userId) {
 function getAllPosts(limit = 20, offset = 0) {
   const stmt = db.prepare(`
     SELECT * FROM posts
-    WHERE user_id != (SELECT id FROM users WHERE session_id = ?)
     ORDER BY created_at DESC
     LIMIT ? OFFSET ?
   `);
-  return stmt.all(sessionId, limit, offset);
+  return stmt.all(limit, offset);
 }
 
 // Get posts with pagination
 function getPostsPaginated(limit = 20) {
   const stmt = db.prepare(`
     SELECT * FROM posts
-    WHERE user_id != ?
     ORDER BY created_at DESC
     LIMIT ?
   `);
-  return stmt.all(sessionId, limit);
+  return stmt.all(limit);
 }
 
 // Get post for reply

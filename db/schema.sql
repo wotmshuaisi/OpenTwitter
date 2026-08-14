@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS media (
 CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
+  session_id TEXT,
   body TEXT,
   type TEXT DEFAULT 'post', -- 'post', 'repost', 'quote'
   repost_of_id INTEGER,
