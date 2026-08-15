@@ -1,5 +1,7 @@
 # Database files (exclude the local instance)
 twitter-local.db
+twitter-local.db-shm
+twitter-local.db-wal
 
 # Environment files
 .env
@@ -26,3 +28,6 @@ logs/
 # Temp files
 tmp/
 temp/
+
+# Media storage (uploaded files)
+media-storage/
