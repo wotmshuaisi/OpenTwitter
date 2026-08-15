@@ -1,5 +1,5 @@
 const db = require('./connection');
-const { users } = require('./users');
+const users = require('./users');
 
 // Create a new post
 function createPost(userId, body, type = 'post', repostOfId = null) {

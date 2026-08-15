@@ -3,26 +3,12 @@ const express = require('express');
 const path = require('path');
 const router = express.Router();
 const db = require('../db/connection');
-const { posts } = require('../db/posts');
-const { mentions } = require('../db/mentions');
-const { users } = require('../db/users');
+const posts = require('../db/posts');
+const mentions = require('../db/mentions');
+const users = require('../db/users');
 
-// Get home feed (render view)
-router.get('/:path', (req, res) => {
-  console.log('Feed route called for:', req.path);
-  console.log('Feed route handler executing...');
-  
-  // Don't handle /health in feed route
-  if (req.path === '/feed' || req.path === '/health') {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  
-  const searchTerm = req.query.search || '';
-  res.render('feed/index', { title: 'Home', searchTerm });
-});
-
-// API endpoint for fetching feed data
-router.get('/api', async (req, res) => {
+// API endpoint for fetching feed data (must be before /:path)
+router.get('/', async (req, res) => {
   try {
     const search = req.query.search || '';
     const postsData = search 
@@ -76,6 +62,17 @@ router.get('/search', async (req, res) => {
     console.error('Search error:', error);
     res.status(500).json({ error: 'Failed to search posts' });
   }
+});
+
+// Get home feed (render view)
+router.get('/:path', (req, res) => {
+  // Don't handle /health in feed route
+  if (req.path === '/feed' || req.path === '/health') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
+  const searchTerm = req.query.search || '';
+  res.render('feed/index', { title: 'Home', searchTerm });
 });
 
 module.exports = router;

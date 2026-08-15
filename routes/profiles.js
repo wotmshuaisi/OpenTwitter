@@ -1,11 +1,11 @@
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
-const { users } = require('../db/users');
-const { posts } = require('../db/posts');
-const { conversations } = require('../db/conversations');
-const { addParticipant } = require('../db/conversationParticipants');
-const { media } = require('../db/media');
+const users = require('../db/users');
+const posts = require('../db/posts');
+const conversations = require('../db/conversations');
+const addParticipant = require('../db/conversationParticipants');
+const media = require('../db/media');
 const storage = require('../storage');
 
 // Configure multer for file uploads

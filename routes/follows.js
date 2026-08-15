@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { follows } = require('../db/follows');
-const { users } = require('../db/users');
+const follows = require('../db/follows');
+const users = require('../db/users');
 
 // Follow endpoint
 router.post('/u/:username/follow', (req, res) => {

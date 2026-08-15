@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { users } = require('../db/users');
-const { conversations } = require('../db/conversations');
-const { messageParticipants } = require('../db/conversationParticipants');
-const { messages } = require('../db/messages');
-const { media } = require('../db/media');
+const users = require('../db/users');
+const conversations = require('../db/conversations');
+const messageParticipants = require('../db/conversationParticipants');
+const messages = require('../db/messages');
+const media = require('../db/media');
 const storage = require('../storage');
 const { storage: storageEngine } = require('multer');
 

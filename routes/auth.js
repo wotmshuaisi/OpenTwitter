@@ -3,14 +3,20 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const router = express.Router();
 const db = require('../db/connection');
-const { users } = require('../db/users');
+const users = require('../db/users');
 
 // Middleware to get current user from session
 function requireAuth(req, res, next) {
-  const sessionId = req.session.id;
+  console.log('[requireAuth] req.sessionID:', req.sessionID);
+  console.log('[requireAuth] req.cookies:', req.cookies);
+  const sessionId = req.sessionID;
+  console.log('[requireAuth] sessionId:', sessionId);
   const user = users.findBySession(sessionId);
+  console.log('[requireAuth] user found:', !!user, user ? user.username : '');
+  console.log('[requireAuth] sessionId in DB:', users.findBySession(sessionId));
   
   if (!user) {
+    console.log('[requireAuth] redirecting to /login');
     return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
   }
   
@@ -20,7 +26,7 @@ function requireAuth(req, res, next) {
 
 // Middleware to set current user in req object
 function currentUser(req, res, next) {
-  const sessionId = req.session.id;
+  const sessionId = req.sessionID;
   const user = users.findBySession(sessionId);
   
   if (user) {
@@ -41,7 +47,7 @@ router.post('/register', async (req, res) => {
     }
     
     if (username.length < 3) {
-      return res.json({ error: 'username_exists' });
+      return res.json({ error: 'username too short' });
     }
     
     // Check if username exists
@@ -60,16 +66,18 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
     
-    // Create user
-    const result = users.createUser(username, email, passwordHash, username, '', null, null);
+    // Insert user directly (create requires userId which we don't have yet)
+    const stmt = db.prepare('INSERT INTO users (email, username, password_hash, display_name) VALUES (?, ?, ?, ?)');
+    const result = stmt.run(email, username, passwordHash, username);
+    const userId = result.lastInsertRowid;
     
     // Create session
-    users.insertSession(req.session.id, result.lastInsertRowid);
+    users.createSession(userId, req.sessionID);
     
     // Clear session data
     delete req.session.returned;
     
-    res.json({ success: true, message: 'Account created successfully' });
+    res.json({ success: true, message: 'Account created successfully', sessionId: req.sessionID, email, username });
   } catch (error) {
     console.error('Registration error:', error);
     res.json({ error: 'An error occurred during registration' });
@@ -103,10 +111,10 @@ router.post('/login', async (req, res) => {
     // Clear session data if set
     delete req.session.returned;
     
-    // Create session
-    users.insertSession(req.session.id, user.id);
+    // Create session in DB
+    users.createSession(user.id, req.sessionID);
     
-    res.json({ success: true, user: user });
+    res.json({ success: true, user: user, sessionId: req.sessionID });
   } catch (error) {
     console.error('Login error:', error);
     res.json({ error: 'An error occurred during login' });
@@ -115,7 +123,7 @@ router.post('/login', async (req, res) => {
 
 // Logout endpoint
 router.post('/logout', (req, res) => {
-  users.deleteSession(req.session.id);
+  users.deleteSession(req.sessionID);
   
   // Clear session data
   delete req.session.returned;

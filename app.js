@@ -7,6 +7,7 @@ const fs = require('fs');
 const db = require('./db/connection');
 const { exec } = require('child_process');
 
+console.log('[APP] Server starting');
 const app = express();
 
 // View engine configuration

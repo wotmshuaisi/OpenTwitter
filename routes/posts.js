@@ -2,12 +2,12 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const { createPost, createRepost, createQuote, deletePost, getUserPostCount, getProfilePosts, deleteQuote, deleteRepost, getById } = require('../db/posts');
-const { mentions } = require('../db/mentions');
-const { media } = require('../db/media');
+const mentions = require('../db/mentions');
+const media = require('../db/media');
 const storage = require('../storage');
-const { users } = require('../db/users');
-const { follows } = require('../db/follows');
-const { analytics } = require('../db/analytics');
+const users = require('../db/users');
+const follows = require('../db/follows');
+const analytics = require('../db/analytics');
 
 // Configure multer for file uploads
 const storageEngine = multer({

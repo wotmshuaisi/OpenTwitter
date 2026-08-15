@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../middleware/requireAuth');
-const { users } = require('../db/users');
-const { posts } = require('../db/posts');
-const { messages } = require('../db/messages');
-const { follows } = require('../db/follows');
-const { analytics } = require('../db/analytics');
+const users = require('../db/users');
+const posts = require('../db/posts');
+const messages = require('../db/messages');
+const follows = require('../db/follows');
+const analytics = require('../db/analytics');
 
 // Dashboard view
 router.get('/', requireAuth, (req, res) => {
