@@ -2,35 +2,69 @@
 
 <h1 class="text-center" style="margin-top: 40px;">Messages with <%= otherUser.displayName %></h1>
 
-<div class="card" style="margin-top: 16px;">
-  <div class="message-bubble message-sent">
-    <div class="post-body">
-      <%= escapeHtml(message.body) %>
-    </div>
-  </div>
-  
-  <% if (message.media_id) { %>
-    <div style="margin:8px 0;">
-      <a href="/media/<%= message.media_id %>storage_key">
-        <% if (message.media.type === 'image') { %>
-          <img style="max-width:300px;" src="/media/<%= message.media_id %>storage_key" alt="Media attachment">
-        <% } else if (message.media.type === 'video') { %>
-          <video style="max-width:300px;" controls>
-            <source src="/media/<%= message.media_id %>storage_key" type="video/mp4">
-          </video>
+<div class="card" style="margin-top: 24px;">
+  <div id="messages-feed" class="messages-feed">
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(message => { %>
+        <% if (message.sender_id === req.user.id) { %>
+          <div class="message-bubble message-sent">
+            <div class="post-body">
+              <%= escapeHtml(message.body) %>
+            </div>
+            
+            <% if (message.media_id) { %>
+              <div style="margin: 8px 0;">
+                <a href="/media/<%= message.media_id %>storage_key">
+                  <% if (message.media.type === 'image') { %>
+                    <img style="max-width: 300px;" src="/media/<%= message.media_id %>storage_key" alt="Media attachment">
+                  <% } else if (message.media.type === 'video') { %>
+                    <video style="max-width: 300px;" controls>
+                      <source src="/media/<%= message.media_id %>storage_key" type="video/mp4">
+                    </video>
+                  <% } else { %>
+                    <div style="background: var(--bg-secondary); padding: 8px; border-radius: 4px;">Media attachment</div>
+                  <% } %>
+                </a>
+              </div>
+            <% } %>
+          </div>
         <% } else { %>
-          <div style="background:var(--bg-secondary);padding:8px;border-radius:4px;">Media attachment</div>
+          <div class="message-bubble message-received">
+            <div class="post-body">
+              <%= escapeHtml(message.body) %>
+            </div>
+            
+            <% if (message.media_id) { %>
+              <div style="margin: 8px 0;">
+                <a href="/media/<%= message.media_id %>storage_key">
+                  <% if (message.media.type === 'image') { %>
+                    <img style="max-width: 300px;" src="/media/<%= message.media_id %>storage_key" alt="Media attachment">
+                  <% } else if (message.media.type === 'video') { %>
+                    <video style="max-width: 300px;" controls>
+                      <source src="/media/<%= message.media_id %>storage_key" type="video/mp4">
+                    </video>
+                  <% } else { %>
+                    <div style="background: var(--bg-secondary); padding: 8px; border-radius: 4px;">Media attachment</div>
+                  <% } %>
+                </a>
+              </div>
+            <% } %>
+          </div>
         <% } %>
-      </a>
-    </div>
-  <% } %>
+      <% }) %>
+    <% } else { %>
+      <div class="empty-state">
+        <p>No messages yet. Start a conversation!</p>
+      </div>
+    <% } %>
+  </div>
 </div>
 
-<div class="card" style="margin-top: 16px;">
+<div class="card" style="margin-top: 24px;">
   <div class="composer">
     <form hx-post="/api/messages" hx-target="#messages-feed" hx-swap="innerHTML" enctype="multipart/form-data" onsubmit="return false;">
       <div class="form-group">
-        <textarea id="message-body" name="body" placeholder="Type a message..." required></textarea>
+        <textarea id="message-body" name="body" placeholder="Type a message..." rows="3" maxlength="140" required></textarea>
         <div class="error-message" id="message-body-error"></div>
       </div>
       
@@ -51,12 +85,6 @@
         <button type="submit" class="btn btn-primary">Send</button>
       </div>
     </form>
-  </div>
-</div>
-
-<div id="messages-feed" class="card" style="padding:0;">
-  <div class="empty-state">
-    <p>Loading messages...</p>
   </div>
 </div>
 

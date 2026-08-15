@@ -1,5 +1,5 @@
 const sharp = require('sharp');
-const { storage } = require('../storage');
+const storage = require('../storage');
 
 // Generate thumbnail from image file
 async function generateThumbnail(payload) {
@@ -7,7 +7,10 @@ async function generateThumbnail(payload) {
   
   try {
     // Get the image file from storage
-    const buffer = await storage.get(storageKey);
+    const driver = storage.get();
+    const buffer = driver.get(storageKey);
+    console.log('[DEBUG] Buffer received:', buffer ? buffer.length : 'null', 'bytes');
+    console.log('[DEBUG] Is Buffer:', Buffer.isBuffer(buffer));
     
     if (!buffer) {
       return { success: false, error: 'Image not found in storage' };
@@ -22,12 +25,11 @@ async function generateThumbnail(payload) {
     const thumbStorageKey = `${storageKey}_thumb`;
     
     // Save thumbnail
-    await storage.put(thumbStorageKey, thumbBuffer);
+    driver.put(thumbStorageKey, thumbBuffer);
     
     // Update media status
-    const db = require('../db/connection');
-    const { media } = require('../db/media');
-    media.updateStatus(mediaId, 'ready');
+    const { updateStatus } = require('../db/media');
+    updateStatus(mediaId, 'ready');
     
     // Emit socket event for real-time update
     emitMediaReady(mediaId);
@@ -46,7 +48,8 @@ async function generateThumbnail(payload) {
 // Get resized image by dimensions
 async function getImageByDimensions(storageKey, width, height) {
   try {
-    const buffer = await storage.get(storageKey);
+    const driver = storage.get();
+    const buffer = driver.get(storageKey);
     
     if (!buffer) {
       return null;
@@ -67,7 +70,8 @@ async function getImageByDimensions(storageKey, width, height) {
 // Get full size image
 async function getImage(storageKey) {
   try {
-    return storage.get(storageKey);
+    const driver = storage.get();
+    return driver.get(storageKey);
   } catch (error) {
     console.error('[image:get]', error);
     return null;
@@ -77,11 +81,19 @@ async function getImage(storageKey) {
 // Delete image from storage
 async function deleteImage(storageKey) {
   try {
-    await storage.delete(storageKey);
+    storage.delete(storageKey);
     return true;
   } catch (error) {
     console.error('[image:delete]', error);
     return false;
+  }
+}
+
+// Emit media ready event via Socket.io
+function emitMediaReady(mediaId) {
+  const io = require('../app').io;
+  if (io) {
+    io.to(`post:${mediaId}`).emit('media:ready', { mediaId });
   }
 }
 

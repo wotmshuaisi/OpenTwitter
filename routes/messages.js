@@ -5,7 +5,7 @@ const { conversations } = require('../db/conversations');
 const { messageParticipants } = require('../db/conversationParticipants');
 const { messages } = require('../db/messages');
 const { media } = require('../db/media');
-const { storage } = require('../storage');
+const storage = require('../storage');
 const { storage: storageEngine } = require('multer');
 
 // Get conversations list
@@ -109,18 +109,25 @@ router.post('/', async (req, res) => {
       const randomSuffix = Math.round(Math.random() * 1E9).toString(36);
       const storageKey = `messages/${conversationId}/${timestamp}-${randomSuffix}.${ext}`;
       
+      // Get storage driver
+      const driver = storage.get();
+      
+      // Read file from disk (multer diskStorage)
+      const fs = require('fs');
+      const fileBuffer = fs.readFileSync(req.file.path);
+      
       // Upload to storage
-      storageKey = await storage.put(storageKey, req.file.buffer);
+      driver.put(storageKey, fileBuffer);
       
       // Create media record
-      mediaId = await media.createMediaRow('message', conversationId, storageKey, req.file.mimetype, req.file.mimetype);
+      mediaId = media.createMediaRow('message', conversationId, storageKey, req.file.mimetype, req.file.mimetype);
       
       // Update media record with status
       media.updateStatus(mediaId, 'processing');
       
       // Enqueue job for thumbnail generation
       const { enqueueJob } = require('../db/jobs');
-      enqueueJob('generateThumbnail', { storageKey, mediaId });
+      enqueueJob('image:thumbnail', { storageKey, mediaId });
     }
     
     // Link message to media

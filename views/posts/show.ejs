@@ -2,7 +2,7 @@
 
 <h1 class="text-center" style="margin-top: 40px;">Post <%= post.id %></h1>
 
-<div class="card" style="margin-top: 16px;">
+<div class="card" style="margin-top: 24px;">
   <article class="post">
     <div class="post-header">
       <a href="/u/<%= post.user.username %>">
@@ -52,16 +52,9 @@
     <% } %>
     
     <div class="post-actions" style="display:flex;gap:12px;padding-top:12px;border-top:1px solid var(--border-color);margin-top:12px;">
-      <button class="btn btn-secondary btn-sm" aria-label="Repost" hx-post="/api/posts/<%= post.id %>/repost" hx-target="#post-actions">Repost</button>
-      <button class="btn btn-secondary btn-sm" aria-label="Share" onclick="copyLink('/posts/<%= post.id %>')">Share</button>
+      <button class="btn btn-secondary btn-sm" aria-label="Repost">Repost</button>
+      <button class="btn btn-secondary btn-sm" aria-label="Share">Share</button>
     </div>
-    
-    <% if (post.type !== 'repost') { %>
-      <div id="post-actions" style="display:flex;gap:12px;padding-top:12px;border-top:1px solid var(--border-color);margin-top:12px;">
-        <button class="btn btn-secondary btn-sm" aria-label="Repost">Repost</button>
-        <button class="btn btn-secondary btn-sm" aria-label="Share">Share</button>
-      </div>
-    <% } %>
   </article>
 </div>
 

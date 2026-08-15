@@ -1,4 +1,5 @@
--- Twitter-like social platform database schema
+-- Twitter-like application schema
+-- Run once on startup if tables don't exist
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -12,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   website TEXT,
   avatar_media_id TEXT,
   header_media_id TEXT,
+  theme_preference TEXT DEFAULT 'system',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -66,7 +68,6 @@ CREATE TABLE IF NOT EXISTS mentions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   post_id INTEGER NOT NULL,
   mentioned_user_id INTEGER NOT NULL,
-  last_read_message_id INTEGER,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
   FOREIGN KEY (mentioned_user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -78,7 +79,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Conversation Participants table
+-- Conversation participants table
 CREATE TABLE IF NOT EXISTS conversation_participants (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   conversation_id INTEGER NOT NULL,
@@ -112,30 +113,14 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Jobs table
+-- Jobs table (SQLite-backed job queue)
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   job_type TEXT NOT NULL,
   data TEXT,
-  status TEXT DEFAULT 'pending',
+  status TEXT DEFAULT 'pending', -- pending | processing | done | failed
+  attempts INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   started_at TIMESTAMP,
-  completed_at TIMESTAMP
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_follows_follower_id ON follows(follower_id);
-CREATE INDEX IF NOT EXISTS idx_follows_followed_id ON follows(followed_id);
-CREATE INDEX IF NOT EXISTS idx_media_type ON media(type);
-CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
-CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);
-CREATE INDEX IF NOT EXISTS idx_mentions_post_id ON mentions(post_id);
-CREATE INDEX IF NOT EXISTS idx_mentions_mentioned_user_id ON mentions(mentioned_user_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversation_participants(user_id);
-CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
-CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
-CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON jobs(job_type);

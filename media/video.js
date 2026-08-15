@@ -27,7 +27,6 @@ async function generateThumbnail(payload) {
           await storage.put(thumbStorageKey, buffer);
           
           // Update media status
-          const db = require('../db/connection');
           const { media } = require('../db/media');
           media.updateStatus(mediaId, 'ready');
           
@@ -66,10 +65,10 @@ async function generateThumbnail(payload) {
 // Get video thumbnail by ID
 async function getVideoThumbnail(videoId) {
   try {
-    const media = require('../db/connection');
-    const { media: mediaDb } = require('../db/media');
+    const db = require('../db/connection');
+    const { media } = require('../db/media');
     
-    const videoMedia = mediaDb.getById(videoId);
+    const videoMedia = media.getById(videoId);
     
     if (!videoMedia || !videoMedia.thumbnail_key) {
       return null;
@@ -115,6 +114,14 @@ async function deleteVideo(storageKey) {
   } catch (error) {
     console.error('[video:delete]', error);
     return false;
+  }
+}
+
+// Emit media ready event via Socket.io
+function emitMediaReady(mediaId) {
+  const io = require('../app').io;
+  if (io) {
+    io.to(`post:${mediaId}`).emit('media:ready', { mediaId });
   }
 }
 

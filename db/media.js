@@ -9,6 +9,16 @@ function createMediaRow(type, userId, storageKey, mime, status = 'processing') {
   return stmt.run(type, userId, storageKey, mime, status);
 }
 
+// Create avatar media for a user
+function createAvatarMedia(userId, storageKey, mime, status = 'processing') {
+  return createMediaRow('avatar', userId, storageKey, mime, status);
+}
+
+// Create header media for a user
+function createHeaderMedia(userId, storageKey, mime, status = 'processing') {
+  return createMediaRow('header', userId, storageKey, mime, status);
+}
+
 // Get media by ID
 function getById(id) {
   const stmt = db.prepare('SELECT * FROM media WHERE id = ?');

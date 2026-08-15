@@ -18,10 +18,12 @@ module.exports = {
     // Generate storage key
     const key = storageKey || Date.now().toString(36);
     
-    // Ensure directory exists
-    const dir = path.join(STORAGE_DIR, key.split('/')[0] || '');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    // Ensure directory exists (for nested paths)
+    if (key.includes('/')) {
+      const dir = path.join(STORAGE_DIR, key.split('/')[0]);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
     }
     
     // Write file
@@ -32,8 +34,11 @@ module.exports = {
   
   // Get file from storage (returns Buffer)
   get(storageKey) {
-    const file = fs.readFileSync(path.join(STORAGE_DIR, storageKey));
-    return file;
+    try {
+      return fs.readFileSync(path.join(STORAGE_DIR, storageKey));
+    } catch (error) {
+      return null;
+    }
   },
   
   // Get file URL for browser
@@ -47,6 +52,26 @@ module.exports = {
       fs.unlinkSync(path.join(STORAGE_DIR, storageKey));
     } catch (error) {
       console.error('Error deleting file:', error);
+    }
+  },
+  
+  // List files in directory
+  async list(dirPath) {
+    try {
+      const files = fs.readdirSync(path.join(STORAGE_DIR, dirPath));
+      return files;
+    } catch (error) {
+      return [];
+    }
+  },
+  
+  // Get file size
+  async getSize(storageKey) {
+    try {
+      const stats = fs.statSync(path.join(STORAGE_DIR, storageKey));
+      return stats.size;
+    } catch (error) {
+      return 0;
     }
   }
 };

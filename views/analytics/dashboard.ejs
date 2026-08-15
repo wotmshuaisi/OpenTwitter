@@ -1,0 +1,69 @@
+<% include '../partials/nav.ejs' %>
+
+<h1 class="text-center" style="margin-top: 40px;">Dashboard</h1>
+
+<div class="card" style="margin-top: 24px;">
+  <h2 style="padding: 24px;">Your Stats</h2>
+  <div class="stats" style="display: flex; justify-content: space-around; padding: 24px;">
+    <div class="stat-item" style="text-align: center;">
+      <div class="stat-value"><%= postCount %></div>
+      <div class="stat-label">Posts</div>
+    </div>
+    <div class="stat-item" style="text-align: center;">
+      <div class="stat-value"><%= followerCount %></div>
+      <div class="stat-label">Followers</div>
+    </div>
+    <div class="stat-item" style="text-align: center;">
+      <div class="stat-value"><%= followingCount %></div>
+      <div class="stat-label">Following</div>
+    </div>
+    <div class="stat-item" style="text-align: center;">
+      <div class="stat-value"><%= messageCount %></div>
+      <div class="stat-label">Messages</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 16px;">
+  <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Recent Activity</h2>
+  <div id="recent-activity" style="padding: 16px;">
+    <% if (recentActivity && recentActivity.length > 0) { %>
+      <% recentActivity.forEach(activity => { %>
+        <div class="activity-item" style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+          <div style="width: 40px; height: 40px; background: var(--bg-secondary); border-radius: 50%;"></div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600;"><%= activity.user_display_name %></div>
+            <div style="color: var(--text-secondary); font-size: 12px;"><%= activity.description %></div>
+            <div style="color: var(--text-secondary); font-size: 12px;"><%= new Date(activity.created_at).toLocaleString() %></div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div class="empty-state">
+        <p>No recent activity.</p>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 16px;">
+  <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Post Analytics</h2>
+  <div id="post-analytics" style="padding: 16px;">
+    <% if (postAnalytics && postAnalytics.length > 0) { %>
+      <% postAnalytics.forEach(post => { %>
+        <div class="post-analytics-item" style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+          <div style="flex: 1;">
+            <div style="font-weight: 600;"><%= post.body.substring(0, 100) %></div>
+            <div style="color: var(--text-secondary); font-size: 12px;">
+              <%= post.reposts %> reposts, <%= post.likes %> likes
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div class="empty-state">
+        <p>No analytics data yet.</p>
+      </div>
+    <% } %>
+  </div>
+</div>

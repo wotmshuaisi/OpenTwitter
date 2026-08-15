@@ -1,0 +1,6 @@
+{
+  "watch": ["app.js", "server.js", "db/", "routes/", "views/", "storage/", "middleware/", "jobs/"],
+  "ignore": ["**/*.test.js", "node_modules/", "media-storage/", "twitter-local.db*"],
+  "ext": "js,json",
+  "delay": "500ms"
+}

@@ -36,6 +36,11 @@ function findBySessionId(sessionId) {
   return stmt.get(sessionId);
 }
 
+// Find user by session (alias for findBySessionId)
+function findBySession(sessionId) {
+  return findBySessionId(sessionId);
+}
+
 // Update user profile
 function updateProfile(userId, fields) {
   const updateFields = Object.entries(fields)
@@ -212,6 +217,7 @@ module.exports = {
   findByEmail,
   findByUsername,
   findBySessionId,
+  findBySession,
   updateProfile,
   updateAvatar,
   updateHeaderImage,

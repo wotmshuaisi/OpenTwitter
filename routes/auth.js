@@ -41,7 +41,7 @@ router.post('/register', async (req, res) => {
     }
     
     if (username.length < 3) {
-      return res.json({ error: 'Username must be at least 3 characters' });
+      return res.json({ error: 'username_exists' });
     }
     
     // Check if username exists

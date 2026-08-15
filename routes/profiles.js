@@ -6,7 +6,7 @@ const { posts } = require('../db/posts');
 const { conversations } = require('../db/conversations');
 const { addParticipant } = require('../db/conversationParticipants');
 const { media } = require('../db/media');
-const { storage } = require('../storage');
+const storage = require('../storage');
 
 // Configure multer for file uploads
 const storageEngine = multer({
@@ -183,18 +183,25 @@ router.post('/:username/profile', storageEngine.single('file'), async (req, res)
       const randomSuffix = Math.round(Math.random() * 1E9).toString(36);
       const avatarStorageKey = `profiles/${user.id}/${timestamp}-${randomSuffix}.${ext}`;
       
+      // Get storage driver
+      const driver = storage.get();
+      
+      // Read file from disk (multer diskStorage)
+      const fs = require('fs');
+      const fileBuffer = fs.readFileSync(req.file.path);
+      
       // Upload to storage
-      avatarStorageKey = await storage.put(avatarStorageKey, req.file.buffer);
+      driver.put(avatarStorageKey, fileBuffer);
       
       // Create media record
-      avatarMediaId = await media.createAvatarMedia(user.id, avatarStorageKey, req.file.mimetype, req.file.mimetype);
+      avatarMediaId = media.createAvatarMedia(user.id, avatarStorageKey, req.file.mimetype, req.file.mimetype);
       
       // Update media record with status
       media.updateStatus(avatarMediaId, 'processing');
       
       // Enqueue job for thumbnail generation
       const { enqueueJob } = require('../db/jobs');
-      enqueueJob('generateThumbnail', { storageKey: avatarStorageKey, mediaId: avatarMediaId });
+      enqueueJob('image:thumbnail', { storageKey: avatarStorageKey, mediaId: avatarMediaId });
       
       // Update user avatar
       require('../db/users').updateAvatar(user.id, avatarMediaId);

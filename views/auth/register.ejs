@@ -1,22 +1,76 @@
-<%= include("../partials/nav.ejs") %>
+<% include '../partials/nav.ejs' %>
 
-<div class="empty-state" style="display:flex;justify-content:center;align-items:center;height:70vh;">
-  <div class="card" style="padding:40px;max-width:400px;margin:0;">
-    <h1 style="text-align:center;margin-bottom:24px;">Register</h1>
-    
-    <div id="register-error" style="color:red;margin-bottom:16px;"></div>
-    
-    <div class="composer-actions">
-      <button hx-get="/register" hx-trigger="click" hx-swap="outerHTML" class="btn btn-primary" style="width:100%;">Register</button>
+<div class="card" style="margin-top: 40px; max-width: 400px; margin-left: auto; margin-right: auto;">
+  <h1 style="text-align: center; margin-bottom: 24px;">Register</h1>
+  
+  <div id="register-error" style="color: var(--danger-color); margin-bottom: 16px;"></div>
+  
+  <form hx-post="/api/auth/register" hx-target="#register-form" hx-swap="outerHTML" onsubmit="return false;">
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required minlength="3">
     </div>
+    
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 0;">
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
+    </div>
+  </form>
+  
+  <div style="text-align: center; margin-top: 16px;">
+    <a href="/login">Already have an account? Login</a>
+  </div>
+</div>
+
+<div id="register-form" class="card" style="margin-top: 24px; max-width: 400px; margin-left: auto; margin-right: auto; display: none;">
+  <div class="empty-state">
+    <p>Account created successfully!</p>
   </div>
 </div>
 
 <script>
-// Check if already logged in
-document.addEventListener('DOMContentLoaded', function() {
-  if (sessionStorage.getItem('sessionToken')) {
-    window.location.href = '/';
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const username = document.getElementById('username').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  
+  // Validation
+  if (username.length < 3) {
+    document.getElementById('register-error').textContent = 'Username must be at least 3 characters';
+    return;
   }
+  
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('email', email);
+  formData.append('password', password);
+  
+  fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    body: formData
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = '/feed';
+      } else {
+        document.getElementById('register-error').textContent = data.error || 'Registration failed';
+      }
+    })
+    .catch(error => {
+      console.error('Registration error:', error);
+      document.getElementById('register-error').textContent = 'An error occurred. Please try again.';
+    });
 });
 </script>

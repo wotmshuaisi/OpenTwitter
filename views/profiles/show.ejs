@@ -1,6 +1,6 @@
 <% include '../partials/nav.ejs' %>
 
-<div class="card" style="padding:0;">
+<div class="card" style="padding: 0;">
   <div class="profile-header">
     <% if (profile.user.avatar_media_id) { %>
       <img class="avatar" src="/media/<%= profile.user.avatar_media_id %>storage_key" alt="<%= profile.user.display_name %>">

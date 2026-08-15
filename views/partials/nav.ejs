@@ -17,3 +17,17 @@
     </button>
   </div>
 </nav>
+
+<script>
+function toggleTheme() {
+  const newTheme = document.querySelector('[data-theme]');
+  if (newTheme.getAttribute('data-theme') === 'system') {
+    newTheme.setAttribute('data-theme', 'light');
+  } else if (newTheme.getAttribute('data-theme') === 'light') {
+    newTheme.setAttribute('data-theme', 'dark');
+  } else {
+    newTheme.setAttribute('data-theme', 'system');
+  }
+  localStorage.setItem('theme', newTheme.getAttribute('data-theme'));
+}
+</script>

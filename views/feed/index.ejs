@@ -1,5 +1,178 @@
-<h1 class="text-center" style="margin-top: 40px;">Home</h1>
+<% include '../partials/nav.ejs' %>
 
 <div class="card" style="margin-top: 16px;">
-  <p>No posts yet. Be the first to post something!</p>
+  <div class="composer">
+    <form hx-post="/api/posts" hx-target="#feed" hx-swap="innerHTML" enctype="multipart/form-data" onsubmit="return false;">
+      <div class="form-group">
+        <textarea id="post-body" name="body" placeholder="What's happening?!" rows="3" maxlength="280"></textarea>
+        <div class="error-message" id="post-body-error"></div>
+      </div>
+      
+      <div class="form-group" style="margin-bottom: 0;">
+        <input type="file" id="post-file" name="file" accept="image/*,video/*" style="display:none">
+        <label for="post-file" class="btn btn-secondary">
+          <% if (mediaPreview) { %>
+            <img src="<%= mediaPreview %>" style="max-height:100px">
+          <% } else { %>
+            Add Media
+          <% } %>
+        </label>
+        <div class="error-message" id="file-error"></div>
+      </div>
+      
+      <div class="composer-actions">
+        <div id="composer-status"></div>
+        <button type="submit" class="btn btn-primary">Post</button>
+      </div>
+    </form>
+  </div>
 </div>
+
+<div id="feed" class="card" style="padding: 0;">
+  <div class="empty-state">
+    <p>Loading feed...</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 16px;">
+  <div style="display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border-color);">
+    <input type="text" id="search-input" placeholder="Search..." style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--bg-primary); color: var(--text-primary);">
+    <button class="btn btn-secondary" onclick="searchPosts()">Search</button>
+  </div>
+  <div id="search-results" class="empty-state" style="padding: 16px;">
+    <p>Search results will appear here</p>
+  </div>
+</div>
+
+<script>
+let mediaPreview = null;
+
+document.getElementById('post-file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'];
+  if (!validTypes.includes(file.type)) {
+    document.getElementById('file-error').textContent = 'Invalid file type. Please use JPG, PNG, GIF, MP4, or WEBM';
+    return;
+  }
+  
+  // Validate file size (max 10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    document.getElementById('file-error').textContent = 'File too large. Maximum size is 10MB';
+    return;
+  }
+  
+  // Show preview
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      mediaPreview = e.target.result;
+      document.querySelector('#post-file + label').innerHTML = `<img src="${e.target.result}" style="max-height:100px">`;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    mediaPreview = file;
+    document.querySelector('#post-file + label').textContent = 'Video preview';
+  }
+  
+  // Clear error
+  document.getElementById('file-error').textContent = '';
+});
+
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const body = document.getElementById('post-body').value.trim();
+  const fileInput = document.getElementById('post-file');
+  
+  // Validation
+  if (body.length > 280) {
+    document.getElementById('post-body-error').textContent = 'Post must be 280 characters or less';
+    return;
+  }
+  
+  if (!body && !fileInput.files[0]) {
+    document.getElementById('post-body-error').textContent = 'Please write something or attach a file';
+    return;
+  }
+  
+  // Clear errors
+  document.getElementById('post-body-error').textContent = '';
+  document.getElementById('file-error').textContent = '';
+  document.getElementById('composer-status').textContent = 'Posting...';
+  
+  const formData = new FormData();
+  formData.append('body', body);
+  
+  if (fileInput.files[0]) {
+    formData.append('file', fileInput.files[0]);
+  }
+  
+  // Use fetch instead of htmx for this demo
+  const form = e.target;
+  form.reset();
+  mediaPreview = null;
+  
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Posting...';
+  
+  fetch('/api/posts', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json' },
+    body: formData
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      } else {
+        document.getElementById('composer-status').textContent = data.error;
+      }
+    })
+    .catch(error => {
+      console.error('Post error:', error);
+      document.getElementById('composer-status').textContent = 'An error occurred. Please try again.';
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    });
+});
+
+function searchPosts() {
+  const query = document.getElementById('search-input').value.trim();
+  if (!query) return;
+  
+  fetch('/api/feed/search?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
+    const results = document.getElementById('search-results');
+    if (data.posts && data.posts.length > 0) {
+      results.innerHTML = data.posts.map(post => {
+        return '<article class="post">' +
+          '<div class="post-header">' +
+          '<a href="/u/' + post.user.username + '">' +
+          '<div class="post-author" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>' +
+          '</a>' +
+          '<div><a href="/u/' + post.user.username + '" class="post-author-name">' + escapeHtml(post.user.display_name) + '</a><span class="post-author-handle">@' + post.user.username + '</span><span class="post-meta">· ' + new Date(post.created_at).toLocaleDateString() + '</span></div>' +
+          '</div>' +
+          '<div class="post-body">' + escapeHtml(post.body || '') + '</div>' +
+          '</article>';
+      }).join('');
+    } else {
+      results.innerHTML = '<div class="empty-state"><p>No results found.</p></div>';
+    }
+  }).catch(error => {
+    console.error('Search error:', error);
+    document.getElementById('search-results').innerHTML = '<div class="empty-state"><p>Error searching.</p></div>';
+  });
+}
+
+// Auto-submit search on Enter key
+document.getElementById('search-input').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    searchPosts();
+  }
+});
+</script>

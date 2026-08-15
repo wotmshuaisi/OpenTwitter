@@ -10,6 +10,15 @@ function createPost(userId, body, type = 'post', repostOfId = null) {
   return stmt.run(userId, body, type, repostOfId);
 }
 
+// Create a post with media
+function createPostMedia(userId, storageKey, body, type = 'post', repostOfId = null) {
+  const stmt = db.prepare(`
+    INSERT INTO posts (user_id, body, type, repost_of_id, media_id)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  return stmt.run(userId, body, type, repostOfId, storageKey);
+}
+
 // Get post by ID
 function getById(id) {
   const stmt = db.prepare('SELECT * FROM posts WHERE id = ?');
@@ -161,6 +170,17 @@ function getProfilePosts(userId) {
   });
 }
 
+// Search posts by query
+function searchPosts(query) {
+  const stmt = db.prepare(`
+    SELECT * FROM posts
+    WHERE body LIKE ?
+    ORDER BY created_at DESC
+    LIMIT 50
+  `);
+  return stmt.all('%' + query + '%');
+}
+
 // Get post with full data
 function getPostWithFullData(id) {
   const post = getById(id);
@@ -175,6 +195,7 @@ function getPostWithFullData(id) {
 
 module.exports = {
   createPost,
+  createPostMedia,
   getById,
   getAllPosts,
   getPostsPaginated,

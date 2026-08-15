@@ -4,9 +4,10 @@ const router = express.Router();
 const { createPost, createRepost, createQuote, deletePost, getUserPostCount, getProfilePosts, deleteQuote, deleteRepost, getById } = require('../db/posts');
 const { mentions } = require('../db/mentions');
 const { media } = require('../db/media');
-const { storage } = require('../storage');
+const storage = require('../storage');
 const { users } = require('../db/users');
 const { follows } = require('../db/follows');
+const { analytics } = require('../db/analytics');
 
 // Configure multer for file uploads
 const storageEngine = multer({
@@ -59,18 +60,25 @@ router.post('/', storageEngine.single('file'), async (req, res) => {
       const randomSuffix = Math.round(Math.random() * 1E9).toString(36);
       const storageKey = `posts/${postId}/${timestamp}-${randomSuffix}.${ext}`;
       
+      // Get storage driver
+      const driver = storage.get();
+      
+      // Read file from disk (multer diskStorage)
+      const fs = require('fs');
+      const fileBuffer = fs.readFileSync(req.file.path);
+      
       // Upload to storage
-      storageKey = await storage.put(storageKey, req.file.buffer);
+      driver.put(storageKey, fileBuffer);
       
       // Create media record
-      mediaId = await media.createPostMedia(req.user.id, storageKey, req.file.mimetype, req.file.mimetype);
+      mediaId = media.createPostMedia(req.user.id, storageKey, req.file.mimetype, req.file.mimetype);
       
       // Update media record with status
       media.updateStatus(mediaId, 'processing');
       
       // Enqueue job for thumbnail generation
       const { enqueueJob } = require('../db/jobs');
-      enqueueJob('generateThumbnail', { storageKey, mediaId });
+      enqueueJob('image:thumbnail', { storageKey, mediaId });
       
       // Parse and add mentions
       const mentionsList = mentions.parseMentions(body, req.user.id);
@@ -80,6 +88,14 @@ router.post('/', storageEngine.single('file'), async (req, res) => {
       if (post) {
         post.mentions = mentionsList.map(m => ({ id: m.id, mentioned_user_id: m.mentioned_user_id }));
       }
+    }
+    
+    // Track analytics event
+    try {
+      const eventType = type === 'repost' ? 'repost' : 'post';
+      analytics.trackEvent(req.user.id, eventType, { body_length: body.length });
+    } catch (error) {
+      console.error('Analytics tracking error:', error);
     }
     
     res.json({ 

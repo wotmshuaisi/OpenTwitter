@@ -1,6 +1,7 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
 
 // Import database connection
 const db = require('./db/connection');
@@ -33,6 +34,26 @@ app.use(session({
   }
 }));
 
+// Middleware
+const requireAuth = require('./middleware/requireAuth');
+const currentUser = require('./middleware/currentUser');
+
+// Initialize schema if needed
+function initSchema() {
+  const schemaPath = path.join(__dirname, 'db', 'schema.sql');
+  if (fs.existsSync(schemaPath)) {
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+    try {
+      db.exec(schema);
+      console.log('Schema initialized');
+    } catch (error) {
+      console.error('Schema initialization error:', error);
+    }
+  }
+}
+
+initSchema();
+
 // Mount route routers
 const auth = require('./routes/auth');
 const profiles = require('./routes/profiles');
@@ -42,6 +63,7 @@ const feed = require('./routes/feed');
 const messages = require('./routes/messages');
 const media = require('./routes/media');
 const health = require('./routes/health');
+const analytics = require('./routes/analytics');
 
 app.use(auth);
 app.use('/profiles', profiles);
@@ -51,11 +73,7 @@ app.use('/messages', messages);
 app.use('/media', media);
 app.use('/health', health);
 app.use('/api', feed);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+app.use('/analytics', analytics);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
@@ -67,6 +85,27 @@ const io = require('socket.io')(httpServer, {
     origin: '*',
     methods: ['GET', 'POST']
   }
+});
+
+// Socket.io real-time updates
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  // Join user room
+  socket.on('join-user', (userId) => {
+    socket.join(`user:${userId}`);
+    console.log(`User ${userId} connected`);
+  });
+
+  // Join post room
+  socket.on('join-post', (postId) => {
+    socket.join(`post:${postId}`);
+  });
+
+  // Leave rooms on disconnect
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
 });
 
 // Start job poller in background
