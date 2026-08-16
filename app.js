@@ -14,6 +14,25 @@ const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Preprocess templates to handle EJS includes (EJS v6 compatibility)
+const { preprocessTemplate } = require('./middleware/templatePreprocessor');
+
+// Override render method to preprocess templates
+const originalRender = app.render.bind(app);
+app.render = function (name, options, callback) {
+  const filename = path.join(this.settings.views || path.join(__dirname, 'views'), name + '.ejs');
+  let template;
+  
+  try {
+    template = fs.readFileSync(filename, 'utf8');
+    template = preprocessTemplate(template, { filename, views: this.settings.views });
+  } catch (error) {
+    return callback(error);
+  }
+  
+  originalRender(name, { ...options, _preprocessed: true }, callback);
+};
+
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -65,6 +84,7 @@ const messages = require('./routes/messages');
 const media = require('./routes/media');
 const health = require('./routes/health');
 const analytics = require('./routes/analytics');
+const notifications = require('./routes/notifications');
 
 app.use(auth);
 app.use('/profiles', profiles);
@@ -75,6 +95,12 @@ app.use('/media', media);
 app.use('/health', health);
 app.use('/api', feed);
 app.use('/analytics', analytics);
+app.use('/notifications', notifications);
+
+// Apply rate limiting to API routes
+app.use('/api', require('./middleware/rateLimiter').apiRateLimiter);
+app.use('/posts', require('./middleware/rateLimiter').postRateLimiter);
+app.use('/auth', require('./middleware/rateLimiter').authRateLimiter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;

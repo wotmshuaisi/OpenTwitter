@@ -123,3 +123,54 @@ CREATE TABLE IF NOT EXISTS jobs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   started_at TIMESTAMP
 );
+
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL, -- 'follow', 'like', 'comment', 'mention'
+  source_user_id INTEGER,
+  post_id INTEGER,
+  message TEXT,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (source_user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+-- Full-text search index using FTS5
+CREATE VIRTUAL TABLE IF NOT EXISTS post_search USING fts5(
+  body,
+  username,
+  display_name,
+  content
+);
+
+-- Trigger to keep FTS5 index in sync with posts table
+CREATE TRIGGER IF NOT EXISTS post_search_ai AFTER INSERT ON posts BEGIN
+  INSERT INTO post_search(rowid, body, username, display_name)
+  VALUES (new.rowid, COALESCE(new.body, ''),
+    (SELECT username FROM users WHERE id = new.user_id),
+    (SELECT display_name FROM users WHERE id = new.user_id));
+END;
+
+CREATE TRIGGER IF NOT EXISTS post_search_ad AFTER DELETE ON posts BEGIN
+  INSERT INTO post_search(post_search, rowid, body, username, display_name)
+  VALUES ('delete', new.rowid, COALESCE(new.body, ''),
+    (SELECT username FROM users WHERE id = new.user_id),
+    (SELECT display_name FROM users WHERE id = new.user_id));
+END;
+
+CREATE TRIGGER IF NOT EXISTS post_search_au AFTER UPDATE ON posts BEGIN
+  INSERT INTO post_search(post_search, rowid, body, username, display_name)
+  VALUES ('delete', old.rowid, COALESCE(old.body, ''),
+    (SELECT username FROM users WHERE id = old.user_id),
+    (SELECT display_name FROM users WHERE id = old.user_id));
+  INSERT INTO post_search(rowid, body, username, display_name)
+  VALUES (new.rowid, COALESCE(new.body, ''),
+    (SELECT username FROM users WHERE id = new.user_id),
+    (SELECT display_name FROM users WHERE id = new.user_id));
+END;
+
+

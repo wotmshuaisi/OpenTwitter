@@ -1,4 +1,4 @@
-<% include '../partials/nav.ejs' %>
+<% include ../partials/nav.ejs %>
 
 <h1 class="text-center" style="margin-top: 40px;">Dashboard</h1>
 
@@ -24,6 +24,24 @@
   </div>
 </div>
 
+<% if (userGrowth && userGrowth.length > 0) { %>
+<div class="card" style="margin-top: 16px;">
+  <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Follower Growth (Last 7 Days)</h2>
+  <div id="growth-chart" style="padding: 16px;">
+    <div style="display: flex; align-items: flex-end; gap: 4px; height: 100px; border-bottom: 1px solid var(--border-color);">
+      <% userGrowth.forEach(point => { %>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+          <div style="width: 100%; max-height: 100px; background: var(--bg-secondary); border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 4px;">
+            <span style="font-size: 11px; font-weight: 600;"><%= point.followers_at_date %></span>
+          </div>
+          <span style="font-size: 9px; color: var(--text-secondary); margin-top: 2px;"><%= new Date(point.date).toLocaleDateString('en-US', { weekday: 'short' }) %></span>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <div class="card" style="margin-top: 16px;">
   <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Recent Activity</h2>
   <div id="recent-activity" style="padding: 16px;">
@@ -46,9 +64,27 @@
   </div>
 </div>
 
+<% if (recentFollowers && recentFollowers.length > 0) { %>
 <div class="card" style="margin-top: 16px;">
-  <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Post Analytics</h2>
-  <div id="post-analytics" style="padding: 16px;">
+  <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Recent Followers</h2>
+  <div id="recent-followers" style="padding: 16px;">
+    <% recentFollowers.forEach(follower => { %>
+      <div class="activity-item" style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+        <div style="width: 32px; height: 32px; background: var(--bg-secondary); border-radius: 50%;"></div>
+        <div style="flex: 1;">
+          <div style="font-weight: 600;"><%= follower.display_name || follower.username %></div>
+          <div style="color: var(--text-secondary); font-size: 12px;">@<%= follower.username %></div>
+        </div>
+        <span style="color: var(--text-secondary); font-size: 11px;"><%= new Date(follower.created_at).toLocaleDateString() %></span>
+      </div>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+
+<div class="card" style="margin-top: 16px;">
+  <h2 style="padding: 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 0;">Top Posts</h2>
+  <div id="top-posts" style="padding: 16px;">
     <% if (postAnalytics && postAnalytics.length > 0) { %>
       <% postAnalytics.forEach(post => { %>
         <div class="post-analytics-item" style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">

@@ -61,17 +61,26 @@ function getUnreadCount(conversationId, userId) {
   return result ? result.count : 0;
 }
 
-// Get messages for a user
-function getUserMessages(userId, limit = 50) {
+// Get messages for a user (as sender)
+function getUserMessagesAsSender(userId, limit = 50) {
   const stmt = db.prepare(`
     SELECT m.*, p.username as sender_username, p.display_name as sender_display_name
     FROM messages m
     JOIN users p ON m.sender_id = p.id
-    WHERE m.user_id = ?
+    WHERE m.sender_id = ?
     ORDER BY m.created_at DESC
     LIMIT ?
   `);
   return stmt.all(userId, limit);
+}
+
+// Get message count for a user
+function getUserMessageCount(userId) {
+  const stmt = db.prepare(`
+    SELECT COUNT(*) as count FROM messages WHERE sender_id = ?
+  `);
+  const result = stmt.get(userId);
+  return result ? result.count : 0;
 }
 
 // Get last message for a conversation
@@ -132,7 +141,8 @@ module.exports = {
   updateMessageMedia,
   getMessageCount,
   getUnreadCount,
-  getUserMessages,
+  getUserMessagesAsSender,
+  getUserMessageCount,
   getLastMessage,
   getMessagesBySender,
   getAllMessagesInConversation,

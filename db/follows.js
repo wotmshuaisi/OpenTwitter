@@ -1,9 +1,21 @@
 const db = require('./connection');
+const notifications = require('./notifications');
 
 // Add a follow relationship
 function addFollow(followerId, followedId) {
   const stmt = db.prepare('INSERT INTO follows (follower_id, followed_id) VALUES (?, ?)');
-  return stmt.run(followerId, followedId);
+  const result = stmt.run(followerId, followedId);
+  
+  // Create notification for the followed user
+  notifications.createNotification(
+    followedId,
+    'follow',
+    followerId,
+    null,
+    null
+  );
+  
+  return result;
 }
 
 // Remove a follow relationship

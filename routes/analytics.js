@@ -1,32 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const requireAuth = require('../middleware/requireAuth');
-const users = require('../db/users');
-const posts = require('../db/posts');
-const messages = require('../db/messages');
-const follows = require('../db/follows');
 const analytics = require('../db/analytics');
+const posts = require('../db/posts');
 
 // Dashboard view
-router.get('/', requireAuth, (req, res) => {
+router.get('/', (req, res) => {
   try {
-    // Get user stats
     const userId = req.user.id;
-    const user = users.findById(userId);
+    
+    // Get user stats
+    const user = require('../db/users').findById(userId);
     
     // Get post count
     const postCount = posts.getUserPostCount(userId);
     
     // Get follower count
-    const followers = follows.listFollowers(userId);
+    const followers = require('../db/follows').listFollowers(userId);
     const followerCount = followers ? followers.length : 0;
     
     // Get following count
-    const following = follows.listFollowing(userId);
+    const following = require('../db/follows').listFollowing(userId);
     const followingCount = following ? following.length : 0;
     
     // Get message count
-    const messagesList = messages.getMessagesByUser(userId);
+    const messagesList = require('../db/messages').getUserMessages(userId);
     const messageCount = messagesList ? messagesList.length : 0;
     
     // Get recent activity
@@ -34,6 +31,12 @@ router.get('/', requireAuth, (req, res) => {
     
     // Get post analytics
     const postAnalytics = analytics.getPostAnalytics(userId);
+    
+    // Get user growth (last 7 days)
+    const userGrowth = analytics.getUserGrowth(userId, 7);
+    
+    // Get recent followers
+    const recentFollowers = analytics.getRecentFollowers(userId, 5);
     
     res.render('analytics/dashboard', {
       title: 'Dashboard',
@@ -43,7 +46,9 @@ router.get('/', requireAuth, (req, res) => {
       followingCount,
       messageCount,
       recentActivity,
-      postAnalytics
+      postAnalytics,
+      userGrowth,
+      recentFollowers
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -55,17 +60,19 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // API endpoint for dashboard data
-router.get('/api', requireAuth, (req, res) => {
+router.get('/api', (req, res) => {
   try {
     const userId = req.user.id;
     
     const postCount = posts.getUserPostCount(userId);
-    const followerCount = follows.listFollowers(userId).length;
-    const followingCount = follows.listFollowing(userId).length;
-    const messageCount = messages.getMessagesByUser(userId).length;
+    const followerCount = require('../db/follows').listFollowers(userId).length;
+    const followingCount = require('../db/follows').listFollowing(userId).length;
+    const messageCount = require('../db/messages').getUserMessages(userId).length;
     
     const recentActivity = analytics.getRecentActivity(userId, 10);
     const postAnalytics = analytics.getPostAnalytics(userId);
+    const userGrowth = analytics.getUserGrowth(userId, 7);
+    const topPosts = analytics.getTopPosts(5);
     
     res.json({
       user: {
@@ -80,7 +87,9 @@ router.get('/api', requireAuth, (req, res) => {
         messages: messageCount
       },
       recentActivity,
-      postAnalytics
+      postAnalytics,
+      userGrowth,
+      topPosts
     });
   } catch (error) {
     console.error('Dashboard API error:', error);

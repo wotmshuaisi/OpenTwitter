@@ -1,0 +1,57 @@
+<% include ../layout.ejs %>
+
+<% block('content') %>
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Notifications</h1>
+    
+    <% if (notifications && notifications.length > 0) { %>
+      <div class="space-y-4">
+        <% notifications.forEach(notification => { %>
+          <div class="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <% if (notification.source_username) { %>
+                  <img src="/avatar/<%= notification.source_username %>.jpg" alt="<%= notification.source_username %>" class="w-10 h-10 rounded-full">
+                <% } else { %>
+                  <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                    <span class="text-gray-600 font-bold">?</span>
+                  </div>
+                <% } %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-900 dark:text-white">
+                  <% if (notification.type === 'follow') { %>
+                    <strong><%= notification.source_username %></strong> started following you
+                  <% } else if (notification.type === 'like') { %>
+                    <strong><%= notification.source_username %></strong> liked your post
+                  <% } else if (notification.type === 'comment') { %>
+                    <strong><%= notification.source_username %></strong> commented on your post
+                  <% } else if (notification.type === 'mention') { %>
+                    You were mentioned in a post by <strong><%= notification.source_username %></strong>
+                  <% } else { %>
+                    <%= notification.message || 'New notification' %>
+                  <% } %>
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <%= new Date(notification.created_at).toLocaleString() %>
+                </p>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } else { %>
+      <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 3.13 6 1.05 6 1a2 2 0 00-2 2v16l1.405-1.405C6.97 18.85 7.87 19 8 19a2 2 0 002-2z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No notifications</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          When you have notifications, they'll appear here.
+        </p>
+      </div>
+    <% } %>
+  </div>
+</div>
+<% endblock() %>

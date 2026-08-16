@@ -1,5 +1,21 @@
 const db = require('./connection');
 const users = require('./users');
+const notifications = require('./notifications');
+
+// Create a notification for post like
+function createLikeNotification(postId, userId) {
+  const post = getById(postId);
+  if (post && post.user_id !== userId) {
+    // Create notification for the post owner
+    notifications.createNotification(
+      post.user_id,
+      'like',
+      userId,
+      postId,
+      null
+    );
+  }
+}
 
 // Create a new post
 function createPost(userId, body, type = 'post', repostOfId = null) {
@@ -170,15 +186,18 @@ function getProfilePosts(userId) {
   });
 }
 
-// Search posts by query
+// Search posts using FTS5 full-text search
 function searchPosts(query) {
-  const stmt = db.prepare(`
-    SELECT * FROM posts
-    WHERE body LIKE ?
-    ORDER BY created_at DESC
+  // Use FTS5 for full-text search
+  const ftsStmt = db.prepare(`
+    SELECT p.* 
+    FROM posts p
+    JOIN post_search ps ON p.id = ps.rowid
+    WHERE post_search MATCH ?
+    ORDER BY p.created_at DESC
     LIMIT 50
   `);
-  return stmt.all('%' + query + '%');
+  return ftsStmt.all(query);
 }
 
 // Get post with full data

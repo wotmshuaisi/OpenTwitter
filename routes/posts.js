@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
-const { createPost, createRepost, createQuote, deletePost, getUserPostCount, getProfilePosts, deleteQuote, deleteRepost, getById } = require('../db/posts');
+const { createPost, createRepost, createQuote, deletePost, getUserPostCount, getProfilePosts, deleteQuote, deleteRepost, getById, createLikeNotification } = require('../db/posts');
 const mentions = require('../db/mentions');
 const media = require('../db/media');
 const storage = require('../storage');
@@ -250,6 +250,22 @@ router.get('/count', (req, res) => {
   } catch (error) {
     console.error('Get post count error:', error);
     res.status(500).json({ error: 'An error occurred while fetching post count' });
+  }
+});
+
+// Like a post
+router.post('/:id/like', (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    
+    // Check if user already liked this post
+    // For now, we'll just create the like notification
+    createLikeNotification(postId, req.user.id);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Like post error:', error);
+    res.status(500).json({ error: 'An error occurred while liking the post' });
   }
 });
 

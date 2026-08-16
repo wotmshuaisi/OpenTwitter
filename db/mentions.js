@@ -1,4 +1,16 @@
 const db = require('./connection');
+const notifications = require('./notifications');
+
+// Create notification for mention
+function createMentionNotification(mentionedUserId, postId, userId) {
+  notifications.createNotification(
+    mentionedUserId,
+    'mention',
+    userId,
+    postId,
+    null
+  );
+}
 
 // Get mentions for a post
 function getMentions(postId) {
@@ -64,7 +76,13 @@ function parseMentions(body, userId) {
     const username = match.slice(1);
     const user = require('./users').findByUsername(username);
     if (user) {
-      return addMention(match, user.id);
+      // Create mention in database
+      addMention(null, user.id);
+      
+      // Create notification for the mentioned user
+      createMentionNotification(user.id, null, userId);
+      
+      return { id: match.index, mentioned_user_id: user.id };
     }
     return null;
   }).filter(Boolean);

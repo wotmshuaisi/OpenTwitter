@@ -1,4 +1,30 @@
-<% include '../partials/nav.ejs' %>
+<nav class="navbar">
+  <div class="navbar-content">
+    <h1 class="logo">Twitter-like</h1>
+    <div class="nav-links">
+      <a href="/feed" class="nav-link">Home</a>
+      <a href="/messages" class="nav-link">Messages</a>
+      <a href="/analytics" class="nav-link">Analytics</a>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <% const t = typeof theme; if (t === 'string' && theme === 'dark') { %>☀️<% } else if (t === 'string' && theme === 'light') { %>🌙<% } else { %>◑<% } %>
+    </button>
+  </div>
+</nav>
+
+<script>
+function toggleTheme() {
+  const newTheme = document.querySelector('[data-theme]');
+  if (newTheme.getAttribute('data-theme') === 'system') {
+    newTheme.setAttribute('data-theme', 'light');
+  } else if (newTheme.getAttribute('data-theme') === 'light') {
+    newTheme.setAttribute('data-theme', 'dark');
+  } else {
+    newTheme.setAttribute('data-theme', 'system');
+  }
+  localStorage.setItem('theme', newTheme.getAttribute('data-theme'));
+}
+</script>
 
 <div class="card" style="margin-top: 16px;">
   <div class="composer">
@@ -11,11 +37,7 @@
       <div class="form-group" style="margin-bottom: 0;">
         <input type="file" id="post-file" name="file" accept="image/*,video/*" style="display:none">
         <label for="post-file" class="btn btn-secondary">
-          <% if (mediaPreview) { %>
-            <img src="<%= mediaPreview %>" style="max-height:100px">
-          <% } else { %>
-            Add Media
-          <% } %>
+          <% if (mediaPreview) { %>📎<% } else { %>Add Media<% } %>
         </label>
         <div class="error-message" id="file-error"></div>
       </div>
@@ -35,9 +57,12 @@
 </div>
 
 <div class="card" style="margin-top: 16px;">
-  <div style="display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border-color);">
-    <input type="text" id="search-input" placeholder="Search..." style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--bg-primary); color: var(--text-primary);">
-    <button class="btn btn-secondary" onclick="searchPosts()">Search</button>
+  <div style="position: relative;">
+    <div style="display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border-color);">
+      <input type="text" id="search-input" placeholder="Search posts, users..." style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--bg-primary); color: var(--text-primary);">
+      <button class="btn btn-secondary" onclick="searchPosts()">Search</button>
+    </div>
+    <div id="search-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0 0 999px 999px; max-height: 200px; overflow-y: auto; display: none; z-index: 10;"></div>
   </div>
   <div id="search-results" class="empty-state" style="padding: 16px;">
     <p>Search results will appear here</p>
@@ -146,6 +171,9 @@ function searchPosts() {
   const query = document.getElementById('search-input').value.trim();
   if (!query) return;
   
+  // Hide suggestions
+  hideSuggestions();
+  
   fetch('/api/feed/search?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
     const results = document.getElementById('search-results');
     if (data.posts && data.posts.length > 0) {
@@ -168,6 +196,58 @@ function searchPosts() {
     document.getElementById('search-results').innerHTML = '<div class="empty-state"><p>Error searching.</p></div>';
   });
 }
+
+function showSuggestions(suggestions) {
+  const container = document.getElementById('search-suggestions');
+  if (suggestions && suggestions.length > 0) {
+    container.innerHTML = suggestions.map(s =>
+      '<div style="padding: 8px 12px; cursor: pointer;" data-username="' + escapeHtml(s.username) + '">' +
+      '<span style="font-weight: 600;">' + escapeHtml(s.display_name || s.username) + '</span> <span style="color: var(--text-secondary);">@' + escapeHtml(s.username) + '</span>' +
+      '</div>'
+    ).join('');
+    container.style.display = 'block';
+  } else {
+    hideSuggestions();
+  }
+}
+
+function hideSuggestions() {
+  document.getElementById('search-suggestions').style.display = 'none';
+}
+
+// Auto-show suggestions on input
+let searchTimeout;
+document.getElementById('search-input').addEventListener('input', function(e) {
+  clearTimeout(searchTimeout);
+  const query = e.target.value.trim();
+  if (query.length < 2) {
+    hideSuggestions();
+    return;
+  }
+  
+  searchTimeout = setTimeout(() => {
+    fetch('/api/feed/suggestions?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
+      showSuggestions(data.suggestions);
+    }).catch(() => hideSuggestions());
+  }, 300);
+});
+
+// Handle suggestion clicks
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#search-suggestions')) {
+    hideSuggestions();
+  }
+});
+
+// Navigate to user profile on suggestion click
+document.getElementById('search-suggestions').addEventListener('click', function(e) {
+  const username = e.target.getAttribute('data-username');
+  if (username) {
+    document.getElementById('search-input').value = username;
+    hideSuggestions();
+    window.location.href = '/u/' + encodeURIComponent(username);
+  }
+});
 
 // Auto-submit search on Enter key
 document.getElementById('search-input').addEventListener('keypress', function(e) {
