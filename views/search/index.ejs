@@ -1,0 +1,302 @@
+<% const query = typeof searchTerm === 'string' && searchTerm.length > 0 ? searchTerm : ''; %>
+<nav class="navbar">
+  <div class="navbar-content">
+    <h1 class="logo">Twitter-like</h1>
+    <div class="nav-links">
+      <a href="/feed" class="nav-link">Home</a>
+      <a href="/search<%= query ? '?q=' + encodeURIComponent(query) : '' %>" class="nav-link">Search<%= query ? ' (' + query + ')' : '' %></a>
+      <a href="/messages" class="nav-link">Messages</a>
+      <a href="/analytics" class="nav-link">Analytics</a>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <% const t = typeof theme; if (t === 'string' && theme === 'dark') { %>☀️<% } else if (t === 'string' && theme === 'light') { %>🌙<% } else { %>◑<% } %>
+    </button>
+  </div>
+</nav>
+
+<div class="card" style="margin-top: 16px;">
+  <div class="search-bar">
+    <form hx-get="/api/search" hx-target="#search-results" hx-trigger="keyup changed delay:500ms" hx-indicator="#search-spinner" style="display: flex; gap: 8px;">
+      <input type="text" id="search-input" name="q" value="<%= query %>" placeholder="Search posts, users..." autocomplete="off">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <div id="search-spinner" class="loading-spinner" style="display: none;">Searching...</div>
+  </div>
+</div>
+
+<% if (query) { %>
+<div id="search-results" class="results-container">
+  <% if (posts && posts.length > 0) { %>
+    <div class="search-header">
+      <h3>Search Results for "<%= query %>"</h3>
+      <p><%= posts.length %> result<%= posts.length !== 1 ? 's' : '' %> found</p>
+    </div>
+    
+    <% posts.forEach(post => { %>
+      <div class="post-card">
+        <div class="post-header">
+          <a href="/u/<%= userMap[post.user_id] ? userMap[post.user_id].username : '' %>" class="username">
+            <%= userMap[post.user_id] ? (userMap[post.user_id].display_name || userMap[post.user_id].username) : 'Unknown User' %>
+          </a>
+          <span class="post-time"><%= post.created_at %></span>
+        </div>
+        
+        <div class="post-body">
+          <% const body = typeof post.body === 'string' ? post.body : ''; %>
+          <%= body %>
+        </div>
+        
+        <% if (post.type === 'repost') { %>
+          <div class="repost-info">Reposted by <%= userMap[post.user_id] ? (userMap[post.user_id].display_name || userMap[post.user_id].username) : 'Unknown' %></div>
+        <% } %>
+        
+        <div class="post-actions">
+          <button class="action-btn" onclick="likePost('<%= post.id %>')">❤️ Like</button>
+          <button class="action-btn" onclick="repostPost('<%= post.id %>')">🔄 Repost</button>
+          <button class="action-btn" onclick="sharePost('<%= post.id %>', '<%= encodeURIComponent(post.body || '') %>')">📤 Share</button>
+        </div>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>No results found</h3>
+      <p>Tried searching for "<%= query %>" but couldn't find any matching posts.</p>
+      <p>You can try different keywords or check your spelling.</p>
+    </div>
+  <% } %>
+</div>
+
+<% } else { %>
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h3>Search Twitter-like</h3>
+    <p>Search through posts, users, and more to find what you're looking for.</p>
+    <p>Try searching for topics, people, or hashtags.</p>
+  </div>
+<% } %>
+
+<script>
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('search-input');
+  
+  if (searchInput) {
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.querySelector('form').submit();
+      }
+    });
+  }
+});
+
+// Like post
+function likePost(postId) {
+  fetch('/api/posts/' + postId + '/like', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Post liked!');
+      } else {
+        alert('Error liking post');
+      }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+// Repost post
+function repostPost(postId) {
+  if (!confirm('Repost this?')) return;
+  
+  fetch('/api/posts/' + postId + '/repost', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Post reposted!');
+      } else {
+        alert('Error reposting post');
+      }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+// Share post
+function sharePost(postId, text) {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Check out this post',
+      text: text,
+      url: window.location.href
+    });
+  } else {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      alert('Link copied to clipboard!');
+    }).catch(err => {
+      alert('Failed to copy link');
+    });
+  }
+}
+
+// Toggle theme
+function toggleTheme() {
+  const newTheme = document.querySelector('[data-theme]');
+  if (newTheme.getAttribute('data-theme') === 'system') {
+    newTheme.setAttribute('data-theme', 'light');
+  } else if (newTheme.getAttribute('data-theme') === 'light') {
+    newTheme.setAttribute('data-theme', 'dark');
+  } else {
+    newTheme.setAttribute('data-theme', 'system');
+  }
+  localStorage.setItem('theme', newTheme.getAttribute('data-theme'));
+}
+</script>
+
+<style>
+.search-bar {
+  margin-bottom: 16px;
+}
+
+.search-bar form {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 4px;
+  background: var(--input-bg, #f5f5f5);
+  color: var(--text-color, #333);
+}
+
+.results-container {
+  min-height: 200px;
+}
+
+.search-header {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #ddd);
+}
+
+.search-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+}
+
+.search-header p {
+  margin: 0;
+  color: var(--text-muted, #666);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted, #666);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  margin-bottom: 8px;
+  color: var(--text-color, #333);
+}
+
+.post-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.username {
+  color: var(--link-color, #1da1f2);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.post-time {
+  color: var(--text-muted, #666);
+  font-size: 14px;
+}
+
+.post-body {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.repost-info {
+  color: var(--text-muted, #666);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.post-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border-color, #ddd);
+  padding-top: 8px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: var(--text-color, #333);
+}
+
+.action-btn:hover {
+  background: var(--hover-bg, #f0f0f0);
+  border-radius: 4px;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color, #ddd);
+  border-top-color: var(--primary-color, #1da1f2);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .search-bar form {
+    flex-direction: column;
+  }
+  
+  .search-bar input {
+    width: 100%;
+  }
+}
+</style>
+
+</div>

@@ -1,8 +1,10 @@
+<% const query = typeof searchTerm === 'string' && searchTerm.length > 0 ? searchTerm : ''; %>
 <nav class="navbar">
   <div class="navbar-content">
     <h1 class="logo">Twitter-like</h1>
     <div class="nav-links">
       <a href="/feed" class="nav-link">Home</a>
+      <a href="/search<%= query ? '?q=' + encodeURIComponent(query) : '' %>" class="nav-link">Search<%= query ? ' (' + query + ')' : '' %></a>
       <a href="/messages" class="nav-link">Messages</a>
       <a href="/analytics" class="nav-link">Analytics</a>
     </div>
@@ -11,20 +13,6 @@
     </button>
   </div>
 </nav>
-
-<script>
-function toggleTheme() {
-  const newTheme = document.querySelector('[data-theme]');
-  if (newTheme.getAttribute('data-theme') === 'system') {
-    newTheme.setAttribute('data-theme', 'light');
-  } else if (newTheme.getAttribute('data-theme') === 'light') {
-    newTheme.setAttribute('data-theme', 'dark');
-  } else {
-    newTheme.setAttribute('data-theme', 'system');
-  }
-  localStorage.setItem('theme', newTheme.getAttribute('data-theme'));
-}
-</script>
 
 <div class="card" style="margin-top: 16px;">
   <div class="composer">
@@ -51,9 +39,45 @@ function toggleTheme() {
 </div>
 
 <div id="feed" class="card" style="padding: 0;">
-  <div class="empty-state">
-    <p>Loading feed...</p>
+  <div id="feed-content">
+    <% if (posts && posts.length > 0) { %>
+      <% for (var i = 0; i < posts.length; i++) { %>
+        <% var post = posts[i]; %>
+        <% var username = userMap[post.user_id] ? userMap[post.user_id].username : ''; %>
+        <% var displayName = userMap[post.user_id] ? (userMap[post.user_id].display_name || userMap[post.user_id].username) : 'Unknown User'; %>
+        <article class="post" data-post-id="<%= post.id %>" style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #ddd); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div class="post-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <a href="/u/<%= username %>" class="username" style="color: var(--link-color, #1da1f2); text-decoration: none; font-weight: bold;"><%= displayName %></a>
+            <span class="post-time" style="color: var(--text-muted, #666); font-size: 14px;"><%= post.created_at %></span>
+          </div>
+          
+          <div class="post-body" style="margin-bottom: 8px; line-height: 1.5;">
+            <%= typeof post.body === 'string' ? post.body : '' %>
+          </div>
+          
+          <% if (post.type === 'repost') { %>
+            <% var repostUser = userMap[post.user_id] ? (userMap[post.user_id].display_name || userMap[post.user_id].username) : 'Unknown'; %>
+            <div class="repost-info" style="color: var(--text-muted, #666); font-size: 14px; margin-bottom: 8px;">Reposted by <%= repostUser %></div>
+          <% } %>
+          
+          <div class="post-actions" style="display: flex; gap: 8px; border-top: 1px solid var(--border-color, #ddd); padding-top: 8px;">
+            <button class="action-btn" onclick="likePost('<%= post.id %>')" style="background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 14px; color: var(--text-color, #333);">❤️ Like</button>
+            <button class="action-btn" onclick="repostPost('<%= post.id %>')" style="background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 14px; color: var(--text-color, #333);">🔄 Repost</button>
+            <button class="action-btn" onclick="sharePost('<%= post.id %>', '<%= encodeURIComponent(typeof post.body === 'string' ? post.body : '') %>')" style="background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 14px; color: var(--text-color, #333);">📤 Share</button>
+          </div>
+        </article>
+      <% } %>
+    <% } else { %>
+      <div class="empty-state" style="text-align: center; padding: 48px 24px; color: var(--text-muted, #666);">
+        <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">📋</div>
+        <h3 style="margin-bottom: 8px; color: var(--text-color, #333);">No posts yet</h3>
+        <p>Be the first to post something! Share your thoughts, photos, or videos.</p>
+      </div>
+    <% } %>
   </div>
+  
+  <!-- Infinite scroll sentinel -->
+  <div id="infinite-scroll-sentinel" style="height: 1px;"></div>
 </div>
 
 <div class="card" style="margin-top: 16px;">
@@ -71,7 +95,125 @@ function toggleTheme() {
 
 <script>
 let mediaPreview = null;
+let lastPostId = null;
 
+// Infinite scroll functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const sentinel = document.getElementById('infinite-scroll-sentinel');
+  
+  if (sentinel) {
+    const observer = new IntersectionObserver(function(entries) {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          loadMorePosts();
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    observer.observe(sentinel);
+  }
+});
+
+async function loadMorePosts() {
+  try {
+    const response = await fetch('/api/feed?sinceId=' + lastPostId, {
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    if (!response.ok) throw new Error('Failed to load more posts');
+    
+    const data = await response.json();
+    
+    if (data.posts && data.posts.length > 0) {
+      lastPostId = data.next_cursor;
+      
+      const feedContent = document.getElementById('feed-content');
+      if (feedContent) {
+        // Add new posts before the sentinel
+        var newPostsHtml = '';
+        for (var j = 0; j < data.posts.length; j++) {
+          var dp = data.posts[j];
+          var dusername = (data.users && data.users.find(function(u) { return u.id === dp.user_id; })) ? data.users.find(function(u) { return u.id === dp.user_id; }).username : '';
+          var ddisplayname = (data.users && data.users.find(function(u) { return u.id === dp.user_id; })) ? (data.users.find(function(u) { return u.id === dp.user_id; }).display_name || data.users.find(function(u) { return u.id === dp.user_id; }).username) : 'Unknown User';
+          
+          newPostsHtml += '<article class="post" data-post-id="' + dp.id + '" style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #ddd); border-radius: 8px; padding: 12px; margin-bottom: 8px;">';
+          newPostsHtml += '<div class="post-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
+          newPostsHtml += '<a href="/u/' + dusername + '" style="color: var(--link-color, #1da1f2); text-decoration: none; font-weight: bold;">' + escapeHtml(ddisplayname) + '</a>';
+          newPostsHtml += '<span class="post-time" style="color: var(--text-muted, #666); font-size: 14px;">' + dp.created_at + '</span>';
+          newPostsHtml += '</div>';
+          newPostsHtml += '<div class="post-body" style="margin-bottom: 8px; line-height: 1.5;">' + escapeHtml(typeof dp.body === 'string' ? dp.body : '') + '</div>';
+          newPostsHtml += '</article>';
+        }
+        
+        sentinel.insertAdjacentHTML('beforebegin', newPostsHtml);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading more posts:', error);
+  }
+}
+
+// Like post
+function likePost(postId) {
+  fetch('/api/posts/' + postId + '/like', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Post liked!');
+      } else {
+        alert('Error liking post');
+      }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+// Repost post
+function repostPost(postId) {
+  if (!confirm('Repost this?')) return;
+  
+  fetch('/api/posts/' + postId + '/repost', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Post reposted!');
+      } else {
+        alert('Error reposting post');
+      }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+// Share post
+function sharePost(postId, text) {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Check out this post',
+      text: text,
+      url: window.location.href
+    });
+  } else {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      alert('Link copied to clipboard!');
+    }).catch(err => {
+      alert('Failed to copy link');
+    });
+  }
+}
+
+// Toggle theme
+function toggleTheme() {
+  const newTheme = document.querySelector('[data-theme]');
+  if (newTheme.getAttribute('data-theme') === 'system') {
+    newTheme.setAttribute('data-theme', 'light');
+  } else if (newTheme.getAttribute('data-theme') === 'light') {
+    newTheme.setAttribute('data-theme', 'dark');
+  } else {
+    newTheme.setAttribute('data-theme', 'system');
+  }
+  localStorage.setItem('theme', newTheme.getAttribute('data-theme'));
+}
+
+// Media file handler
 document.getElementById('post-file').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -94,7 +236,7 @@ document.getElementById('post-file').addEventListener('change', function(e) {
     const reader = new FileReader();
     reader.onload = function(e) {
       mediaPreview = e.target.result;
-      document.querySelector('#post-file + label').innerHTML = `<img src="${e.target.result}" style="max-height:100px">`;
+      document.querySelector('#post-file + label').innerHTML = '<img src="' + e.target.result + '" style="max-height:100px">';
     };
     reader.readAsDataURL(file);
   } else {
@@ -174,18 +316,19 @@ function searchPosts() {
   // Hide suggestions
   hideSuggestions();
   
-  fetch('/api/feed/search?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
+  fetch('/api/search?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
     const results = document.getElementById('search-results');
     if (data.posts && data.posts.length > 0) {
-      results.innerHTML = data.posts.map(post => {
-        return '<article class="post">' +
-          '<div class="post-header">' +
-          '<a href="/u/' + post.user.username + '">' +
-          '<div class="post-author" style="width:40px;height:40px;background:var(--bg-secondary);border-radius:50%;"></div>' +
-          '</a>' +
-          '<div><a href="/u/' + post.user.username + '" class="post-author-name">' + escapeHtml(post.user.display_name) + '</a><span class="post-author-handle">@' + post.user.username + '</span><span class="post-meta">· ' + new Date(post.created_at).toLocaleDateString() + '</span></div>' +
+      results.innerHTML = data.posts.map(function(post) {
+        var uname = (data.users && data.users.find(function(u) { return u.id === post.user_id; })) ? data.users.find(function(u) { return u.id === post.user_id; }).username : '';
+        var dname = (data.users && data.users.find(function(u) { return u.id === post.user_id; })) ? (data.users.find(function(u) { return u.id === post.user_id; }).display_name || data.users.find(function(u) { return u.id === post.user_id; }).username) : 'Unknown User';
+        
+        return '<article class="post" style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #ddd); border-radius: 8px; padding: 12px; margin-bottom: 8px;">' +
+          '<div class="post-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">' +
+          '<a href="/u/' + uname + '" style="color: var(--link-color, #1da1f2); text-decoration: none; font-weight: bold;"><%= dname %></a>' +
+          '<span class="post-time" style="color: var(--text-muted, #666); font-size: 14px;">' + post.created_at + '</span>' +
           '</div>' +
-          '<div class="post-body">' + escapeHtml(post.body || '') + '</div>' +
+          '<div class="post-body" style="margin-bottom: 8px; line-height: 1.5;">' + escapeHtml(post.body || '') + '</div>' +
           '</article>';
       }).join('');
     } else {
@@ -200,11 +343,11 @@ function searchPosts() {
 function showSuggestions(suggestions) {
   const container = document.getElementById('search-suggestions');
   if (suggestions && suggestions.length > 0) {
-    container.innerHTML = suggestions.map(s =>
-      '<div style="padding: 8px 12px; cursor: pointer;" data-username="' + escapeHtml(s.username) + '">' +
-      '<span style="font-weight: 600;">' + escapeHtml(s.display_name || s.username) + '</span> <span style="color: var(--text-secondary);">@' + escapeHtml(s.username) + '</span>' +
-      '</div>'
-    ).join('');
+    container.innerHTML = suggestions.map(function(s) {
+      return '<div style="padding: 8px 12px; cursor: pointer;" data-username="' + escapeHtml(s.username) + '">' +
+        '<span style="font-weight: 600;">' + escapeHtml(s.display_name || s.username) + '</span> <span style="color: var(--text-secondary);">@' + escapeHtml(s.username) + '</span>' +
+        '</div>';
+    }).join('');
     container.style.display = 'block';
   } else {
     hideSuggestions();
@@ -226,7 +369,7 @@ document.getElementById('search-input').addEventListener('input', function(e) {
   }
   
   searchTimeout = setTimeout(() => {
-    fetch('/api/feed/suggestions?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
+    fetch('/api/suggestions?q=' + encodeURIComponent(query)).then(response => response.json()).then(data => {
       showSuggestions(data.suggestions);
     }).catch(() => hideSuggestions());
   }, 300);
@@ -239,7 +382,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Navigate to user profile on suggestion click
 document.getElementById('search-suggestions').addEventListener('click', function(e) {
   const username = e.target.getAttribute('data-username');
   if (username) {
@@ -256,3 +398,152 @@ document.getElementById('search-input').addEventListener('keypress', function(e)
   }
 });
 </script>
+
+<style>
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted, #666);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  margin-bottom: 8px;
+  color: var(--text-color, #333);
+}
+
+.post {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.username {
+  color: var(--link-color, #1da1f2);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.post-time {
+  color: var(--text-muted, #666);
+  font-size: 14px;
+}
+
+.post-body {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.repost-info {
+  color: var(--text-muted, #666);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.post-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border-color, #ddd);
+  padding-top: 8px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: var(--text-color, #333);
+}
+
+.action-btn:hover {
+  background: var(--hover-bg, #f0f0f0);
+  border-radius: 4px;
+}
+
+.search-bar {
+  margin-bottom: 16px;
+}
+
+.search-bar form {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 4px;
+  background: var(--input-bg, #f5f5f5);
+  color: var(--text-color, #333);
+}
+
+.results-container {
+  min-height: 200px;
+}
+
+.search-header {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #ddd);
+}
+
+.search-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+}
+
+.search-header p {
+  margin: 0;
+  color: var(--text-muted, #666);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color, #ddd);
+  border-top-color: var(--primary-color, #1da1f2);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .search-bar form {
+    flex-direction: column;
+  }
+  
+  .search-bar input {
+    width: 100%;
+  }
+}
+</style>
+
+</div>

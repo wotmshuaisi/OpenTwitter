@@ -25,16 +25,24 @@ function sanitizeHtml(html) {
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#039;/g, "'");
 }
 
-// API endpoint for fetching feed data (must be before /:path)
+// API endpoint for fetching feed data with pagination (infinite scroll)
 router.get('/', async (req, res) => {
   try {
     const searchQuery = req.query.search || '';
+    const sinceId = req.query.sinceId || null; // For infinite scroll pagination
+    
     let postsData;
     
     if (searchQuery) {
       postsData = search.advancedSearch({ query: searchQuery });
     } else {
-      postsData = require('../db/posts').getAllPosts();
+      const posts = require('../db/posts');
+      if (sinceId) {
+        // Get posts after the given ID for infinite scroll
+        postsData = posts.getPostsAfter(sinceId);
+      } else {
+        postsData = posts.getAllPosts();
+      }
     }
 
     // Get user info for posts using direct SQL query
@@ -58,10 +66,14 @@ router.get('/', async (req, res) => {
       })));
     }
 
+    // Get next cursor for infinite scroll
+    const lastPostId = postsData.length > 0 ? postsData[postsData.length - 1].id : null;
+
     res.json({
       posts: postsData,
       mentions: mentionsList,
-      users: Object.values(userMap)
+      users: Object.values(userMap),
+      next_cursor: lastPostId || null
     });
   } catch (error) {
     console.error('Get feed error:', error);
@@ -181,7 +193,12 @@ router.get('/:path', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
   
-  const searchTerm = req.query.search || '';
+  // Handle search page
+  const searchTerm = req.query.q || req.query.search || '';
+  if (searchTerm) {
+    return res.render('search/index', { title: 'Search', searchTerm, mediaPreview: null });
+  }
+  
   res.render('feed/index', { title: 'Home', searchTerm, mediaPreview: null });
 });
 

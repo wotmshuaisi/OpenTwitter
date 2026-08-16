@@ -97,6 +97,31 @@ app.use('/api', feed);
 app.use('/analytics', analytics);
 app.use('/notifications', notifications);
 
+// Catch-all route for rendering views (feed, search, etc.)
+app.get('/:path', (req, res) => {
+  // Don't handle API routes here
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  
+  // Render feed view for /feed
+  if (req.path === '/feed') {
+    const searchTerm = req.query.q || req.query.search || '';
+    res.render('feed/index', { title: 'Home', searchTerm, mediaPreview: null });
+    return;
+  }
+  
+  // Render search view for /search
+  if (req.path === '/search') {
+    const searchTerm = req.query.q || '';
+    res.render('search/index', { title: 'Search', searchTerm, mediaPreview: null });
+    return;
+  }
+  
+  // Default to feed view
+  res.render('feed/index', { title: 'Home', searchTerm: '', mediaPreview: null });
+});
+
 // Apply rate limiting to API routes
 app.use('/api', require('./middleware/rateLimiter').apiRateLimiter);
 app.use('/posts', require('./middleware/rateLimiter').postRateLimiter);
