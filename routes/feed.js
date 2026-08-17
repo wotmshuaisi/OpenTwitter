@@ -5,6 +5,7 @@ const router = express.Router();
 const db = require('../db/connection');
 const search = require('../db/search');
 const users = require('../db/users');
+const requireAuth = require('../middleware/requireAuth');
 
 // Simple HTML sanitizer
 function sanitizeHtml(html) {
@@ -146,7 +147,7 @@ router.get('/suggestions', async (req, res) => {
 });
 
 // POST endpoint for creating posts (matches any path under /api)
-router.post('/:path', async (req, res) => {
+router.post('/:path', requireAuth, async (req, res) => {
   try {
     const { body } = req.body;
     const userId = req.user ? req.user.id : null;
@@ -169,16 +170,15 @@ router.post('/:path', async (req, res) => {
     
     // Create post
     const posts = require('../db/posts');
-    const result = await posts.createPost({
-      userId,
-      body: sanitizedBody,
-      type: 'text'
-    });
+    const result = await posts.createPost(userId, sanitizedBody, 'post');
     
-    if (result.success) {
-      res.json({ success: true, post: result.post });
+    if (result.changes > 0) {
+      const newPostId = result.lastInsertRowid;
+      // Get the created post
+      const newPost = posts.getById(newPostId);
+      res.json({ success: true, post: newPost });
     } else {
-      res.status(400).json({ error: result.error || 'Failed to create post' });
+      res.status(400).json({ error: 'Failed to create post' });
     }
   } catch (error) {
     console.error('Create post error:', error);

@@ -46,7 +46,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
